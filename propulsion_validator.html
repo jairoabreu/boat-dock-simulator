@@ -1,0 +1,1213 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Validador de Controle de Propulsão</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  background: #09131f;
+  color: #b8d0e4;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100vh;
+  padding: 16px;
+  user-select: none;
+}
+
+/* wrapper transparente — mantém estrutura sem alterar layout */
+.page-content {
+  display: contents;
+}
+
+header { text-align:center; margin-bottom:16px; }
+header h1 { font-size:13px; font-weight:400; letter-spacing:3px; color:#4a8ab0; text-transform:uppercase; }
+header p  { font-size:9px; letter-spacing:1.5px; color:#243a52; margin-top:3px; text-transform:uppercase; }
+
+/* ── THRUSTER ROWS (dentro do painel do barco) ── */
+.thr-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 8px;
+}
+.thr-row-lbl {
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  color: #1a3a58;
+  text-transform: uppercase;
+  flex: 1;
+  text-align: center;
+}
+
+.thr-btn {
+  background: #0a1a2c;
+  border: 1px solid #162840;
+  color: #265880;
+  padding: 7px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  transition: all 0.1s;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+  min-width: 90px;
+}
+.thr-btn:hover { background:#122030; color:#3a78a8; }
+.thr-btn.active {
+  background: #082820;
+  border-color: #168048;
+  color: #22e068;
+  box-shadow: 0 0 14px #18e05840, inset 0 0 6px #10803820;
+}
+
+/* ── THRUSTER CONFIG ── */
+.cfg-section {
+  width: 100%; background: #0a1624; border: 1px solid #142238;
+  border-radius: 8px; padding: 8px 12px; display: flex; flex-direction: column; gap: 6px;
+}
+.cfg-section-lbl { font-size: 8px; letter-spacing: 2px; color: #1a3050; text-transform: uppercase; }
+.cfg-row { display: flex; align-items: center; justify-content: space-between; }
+.cfg-row-lbl { font-size: 9px; letter-spacing: 1px; color: #2a4a68; text-transform: uppercase; }
+.cfg-toggle {
+  background: #0c1828; border: 1px solid #162840; color: #2a4a6a;
+  padding: 4px 14px; border-radius: 10px; cursor: pointer; font-size: 9px;
+  letter-spacing: 1.5px; text-transform: uppercase; transition: all .2s; min-width: 76px; text-align: center;
+}
+.cfg-toggle.on  { background: #082820; border-color: #168048; color: #22e068; box-shadow: 0 0 8px #18e05830; }
+.thr-row.disabled { opacity: 0.22; pointer-events: none; }
+
+
+.main {
+  display: flex;
+  gap: 28px;
+  align-items: flex-start;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* ── BOAT PANEL ── */
+.boat-panel {
+  background: #0b1828;
+  border: 1px solid #14283e;
+  border-radius: 16px;
+  padding: 14px 18px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.boat-lbl { font-size:9px; letter-spacing:2px; color:#1e4060; text-transform:uppercase; }
+
+/* ── CONTROLS ── */
+.controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  min-width: 248px;
+}
+
+/* ── JOYSTICK ── */
+.joy-section { display:flex; flex-direction:column; align-items:center; gap:6px; }
+.joy-title   { font-size:10px; letter-spacing:2px; color:#2a5070; text-transform:uppercase; }
+.joy-hint    { font-size:9px; color:#1a3550; letter-spacing:0.5px; text-align:center; line-height:1.5; }
+
+.joy-outer {
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  position: relative;
+  cursor: crosshair;
+  background: radial-gradient(circle at 50% 46%, #0f2038 50%, #07101e);
+  box-shadow: 0 0 50px #00000099, inset 0 0 30px #00000066;
+}
+.joy-svg { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
+
+.joy-handle {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 36% 30%, #6abae8, #1a4a82);
+  border: 2px solid #3a90d0;
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  cursor: grab;
+  box-shadow: 0 4px 20px #00000099, 0 0 16px #1a72b040;
+  z-index: 2;
+  transition: box-shadow 0.1s;
+}
+.joy-handle.active { cursor:grabbing; box-shadow:0 4px 28px #00000099, 0 0 28px #2a92e060; }
+
+/* ── READOUTS ── */
+.rdrow { display:flex; gap:8px; }
+.rdout { background:#0a1624; border:1px solid #142238; border-radius:8px; padding:7px 10px; text-align:center; min-width:66px; }
+.rdout-lbl { font-size:8px; color:#1e4060; letter-spacing:1px; text-transform:uppercase; margin-bottom:2px; }
+.rdout-val { font-size:15px; font-weight:600; font-variant-numeric:tabular-nums; color:#4a88b0; }
+.rdout-val.pos { color:#26d46a; }
+.rdout-val.neg { color:#e04040; }
+
+/* ── PROP CARDS ── */
+.divider { width:100%; height:1px; background:#142238; }
+.sec-lbl { font-size:9px; letter-spacing:2px; color:#1e4060; text-transform:uppercase; align-self:flex-start; }
+.prop-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; width:248px; }
+.prop-card { background:#0a1624; border:1px solid #142238; border-radius:8px; padding:9px 10px; }
+.prop-lbl  { font-size:9px; color:#1e4060; letter-spacing:0.8px; text-transform:uppercase; margin-bottom:5px; }
+.prop-track { height:7px; background:#0c1a2c; border-radius:4px; position:relative; overflow:hidden; }
+.prop-fill  { position:absolute; top:0; height:100%; border-radius:4px; transition:width .07s, left .07s, background .07s; }
+.prop-num   { font-size:11px; font-variant-numeric:tabular-nums; margin-top:4px; color:#4a88b0; }
+
+/* ── RESET ── */
+.btn-reset {
+  background: #0c1e30; border: 1px solid #183050;
+  color: #2a6088; padding:8px 30px; border-radius:8px;
+  cursor:pointer; font-size:11px; letter-spacing:1.5px;
+  text-transform:uppercase; transition:all .15s;
+}
+.btn-reset:hover { background:#183050; color:#60a8d0; }
+
+/* ── PROPELLER SPIN ── */
+@keyframes spin-cw  { to { transform:rotate(360deg);  } }
+@keyframes spin-ccw { to { transform:rotate(-360deg); } }
+.blade-grp {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: spin-cw 8s linear infinite;
+  animation-play-state: paused;
+}
+</style>
+</head>
+<body>
+
+<div class="page-content">
+<header>
+  <h1>⚓ Validador de Controle de Propulsão</h1>
+  <p>Marine Telematics — Propulsion Control System Validator v1.1</p>
+</header>
+
+<div class="main">
+
+  <!-- ══════════════════════════════════════
+       BOAT PANEL
+  ══════════════════════════════════════ -->
+  <div class="boat-panel">
+    <div class="boat-lbl">▲ Proa</div>
+
+    <svg id="boat-svg" viewBox="0 0 300 560" width="270" height="504">
+      <defs>
+        <!-- Hull outer: white gloss with port/starboard shading -->
+        <linearGradient id="gHullOuter" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%"   stop-color="#7a8e9e"/>
+          <stop offset="14%"  stop-color="#c8d4dc"/>
+          <stop offset="50%"  stop-color="#f2f4f2"/>
+          <stop offset="86%"  stop-color="#c0ccd6"/>
+          <stop offset="100%" stop-color="#7a8e9e"/>
+        </linearGradient>
+        <!-- Deck surface -->
+        <linearGradient id="gDeck" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%"   stop-color="#b8a880"/>
+          <stop offset="50%"  stop-color="#d8c8a0"/>
+          <stop offset="100%" stop-color="#b8a880"/>
+        </linearGradient>
+        <!-- Teak planks (side decks / cockpit) -->
+        <pattern id="pTeak" x="0" y="0" width="100" height="7" patternUnits="userSpaceOnUse">
+          <rect width="100" height="7" fill="#b07838"/>
+          <rect width="100" height="1.2" y="5.8" fill="#7a4e18"/>
+        </pattern>
+        <!-- Cabin hardtop -->
+        <linearGradient id="gHardtop" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%"   stop-color="#ccd4de"/>
+          <stop offset="100%" stop-color="#9aacbe"/>
+        </linearGradient>
+        <!-- Window glass -->
+        <linearGradient id="gGlass" x1="0%" y1="0%" x2="60%" y2="100%">
+          <stop offset="0%"   stop-color="#7abcda" stop-opacity="0.9"/>
+          <stop offset="50%"  stop-color="#3a7898" stop-opacity="1"/>
+          <stop offset="100%" stop-color="#1a3e5a" stop-opacity="1"/>
+        </linearGradient>
+        <!-- Glass glint -->
+        <linearGradient id="gGlint" x1="0%" y1="0%" x2="80%" y2="100%">
+          <stop offset="0%"   stop-color="#fff" stop-opacity="0.35"/>
+          <stop offset="100%" stop-color="#fff" stop-opacity="0"/>
+        </linearGradient>
+        <!-- Motor body -->
+        <linearGradient id="gMotor" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%"   stop-color="#3c4e62"/>
+          <stop offset="100%" stop-color="#1a2634"/>
+        </linearGradient>
+        <!-- Propeller blade -->
+        <linearGradient id="gBlade" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%"   stop-color="#567090"/>
+          <stop offset="100%" stop-color="#1e3a58"/>
+        </linearGradient>
+        <!-- Thruster blade -->
+        <linearGradient id="gThrBlade" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%"   stop-color="#5a80a0"/>
+          <stop offset="100%" stop-color="#284a6a"/>
+        </linearGradient>
+        <!-- Swim platform -->
+        <linearGradient id="gSwim" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%"   stop-color="#c0c8d0"/>
+          <stop offset="50%"  stop-color="#d8dce0"/>
+          <stop offset="100%" stop-color="#c0c8d0"/>
+        </linearGradient>
+        <!-- Glow filters -->
+        <filter id="fGlowGreen" x="-60%" y="-60%" width="220%" height="220%">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="3.5" result="b"/>
+          <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <filter id="fGlowRed" x="-60%" y="-60%" width="220%" height="220%">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="3.5" result="b"/>
+          <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <filter id="fShadowBoat" x="-12%" y="-4%" width="124%" height="112%">
+          <feDropShadow dx="4" dy="10" stdDeviation="12" flood-color="#000" flood-opacity="0.55"/>
+        </filter>
+        <filter id="fShadowCabin" x="-15%" y="-15%" width="130%" height="135%">
+          <feDropShadow dx="3" dy="5" stdDeviation="6" flood-color="#000" flood-opacity="0.35"/>
+        </filter>
+      </defs>
+
+      <!-- ══ OVERALL BOAT SHADOW ══ -->
+      <ellipse cx="153" cy="280" rx="138" ry="268"
+               fill="#000" opacity="0.3" filter="url(#fShadowBoat)"/>
+
+      <!-- ══ HULL OUTER BODY (white fibreglass) ══ -->
+      <path d="
+        M 150,22
+        C 200,22, 268,72, 274,156
+        L 276,356
+        C 276,420, 252,456, 150,462
+        C 48,456,  24,420,  24,356
+        L 26,156
+        C 32,72,  100,22, 150,22 Z
+      " fill="url(#gHullOuter)"/>
+
+      <!-- Hull wall border (dark navy visible from above as hull thickness) -->
+      <path d="
+        M 150,22
+        C 200,22, 268,72, 274,156
+        L 276,356
+        C 276,420, 252,456, 150,462
+        C 48,456,  24,420,  24,356
+        L 26,156
+        C 32,72,  100,22, 150,22 Z
+      " fill="none" stroke="#16283e" stroke-width="20"/>
+
+      <!-- Hull waterline accent stripe (dark blue belt) -->
+      <path d="
+        M 150,22
+        C 200,22, 268,72, 274,156
+        L 276,356
+        C 276,420, 252,456, 150,462
+        C 48,456,  24,420,  24,356
+        L 26,156
+        C 32,72,  100,22, 150,22 Z
+      " fill="none" stroke="#0a1e32" stroke-width="6" stroke-dasharray="0"/>
+
+      <!-- Hull highlight line (top gloss edge) -->
+      <path d="
+        M 150,28 C 196,28, 258,74, 262,156
+        L 264,348
+      " fill="none" stroke="#e8eef4" stroke-width="2" stroke-opacity="0.4"/>
+
+      <!-- ══ MAIN DECK ══ -->
+      <path d="
+        M 150,46
+        C 194,46, 252,90, 258,158
+        L 260,354
+        C 260,412, 240,440, 150,446
+        C 60,440,  40,412,  40,354
+        L 42,158
+        C 48,90,  106,46, 150,46 Z
+      " fill="url(#gDeck)"/>
+
+      <!-- ══ PORT SIDE DECK (teak walkway) ══ -->
+      <path d="
+        M 150,52  C 112,52, 70,90, 58,158
+        L 54,354  C 54,408, 64,434, 96,442
+        L 76,440  C 44,430, 40,408, 40,354
+        L 42,158  C 48,90, 106,46, 150,46 Z
+      " fill="url(#pTeak)" opacity="0.85"/>
+
+      <!-- ══ STBD SIDE DECK (teak walkway) ══ -->
+      <path d="
+        M 150,52  C 188,52, 230,90, 242,158
+        L 246,354 C 246,408, 236,434, 204,442
+        L 224,440 C 256,430, 260,408, 260,354
+        L 258,158 C 252,90, 194,46, 150,46 Z
+      " fill="url(#pTeak)" opacity="0.85"/>
+
+      <!-- ══ BOW V-STRIP ══ -->
+      <path d="M 150,46 L 130,112 L 150,104 L 170,112 Z" fill="#a89060" opacity="0.75"/>
+
+      <!-- ══ BOW ANCHOR WINDLASS ══ -->
+      <ellipse cx="150" cy="78" rx="14" ry="10" fill="#58687a" stroke="#404e5c" stroke-width="1.2"/>
+      <rect x="143" y="72" width="14" height="7" rx="2.5" fill="#4a5a6a"/>
+      <circle cx="150" cy="76" r="3" fill="#30404e"/>
+      <!-- Anchor chain line -->
+      <line x1="150" y1="80" x2="150" y2="110" stroke="#506070" stroke-width="1.5"
+            stroke-dasharray="3,3" opacity="0.6"/>
+
+      <!-- ══ BOW THRUSTER ══ -->
+      <!-- Hull openings (port) -->
+      <rect x="22" y="127" width="28" height="20" rx="7"
+            fill="#0a1828" stroke="#1a3050" stroke-width="1.5"/>
+      <!-- Hull openings (stbd) -->
+      <rect x="250" y="127" width="28" height="20" rx="7"
+            fill="#0a1828" stroke="#1a3050" stroke-width="1.5"/>
+      <!-- Tunnel across deck -->
+      <rect x="46" y="129" width="208" height="16" rx="8"
+            fill="#162438" opacity="0.85"/>
+      <!-- Tunnel inner highlight -->
+      <rect x="50" y="130" width="200" height="5" rx="3"
+            fill="#223450" opacity="0.6"/>
+      <!-- Thrust arrows bow -->
+      <g id="bow-arr-left" opacity="0" filter="url(#fGlowGreen)">
+        <polygon points="15,137  34,128  34,146" fill="#00ee88"/>
+      </g>
+      <g id="bow-arr-right" opacity="0" filter="url(#fGlowGreen)">
+        <polygon points="285,137  266,128  266,146" fill="#00ee88"/>
+      </g>
+      <!-- Bow thruster propeller -->
+      <g id="bow-prop-pivot" transform="translate(150,137)">
+        <g id="bow-prop" class="blade-grp">
+          <ellipse cx="0" cy="-17" rx="10" ry="21" fill="url(#gThrBlade)" opacity="0.94"/>
+          <ellipse cx="0" cy="-17" rx="10" ry="21" fill="url(#gThrBlade)" opacity="0.94"
+                   transform="rotate(180)"/>
+          <circle  cx="0" cy="0" r="6.5" fill="#2a4a68"/>
+          <circle  cx="0" cy="0" r="3"   fill="#4a7298"/>
+        </g>
+      </g>
+
+      <!-- Navigation lights -->
+      <circle cx="40" cy="143" r="5" fill="#cc1818" opacity="0.92"/>
+      <circle cx="40" cy="143" r="5" fill="none" stroke="#8a0000" stroke-width="1"/>
+      <circle cx="260" cy="143" r="5" fill="#0cb040" opacity="0.92"/>
+      <circle cx="260" cy="143" r="5" fill="none" stroke="#006820" stroke-width="1"/>
+
+      <!-- ══ FOREDECK HATCH ══ -->
+      <ellipse cx="150" cy="178" rx="28" ry="32"
+               fill="#7aacca" stroke="#5a90b0" stroke-width="1.5"/>
+      <ellipse cx="150" cy="178" rx="18" ry="22" fill="#5a9ab8"/>
+      <ellipse cx="150" cy="178" rx="7"  ry="9"  fill="#4a88a8"/>
+      <!-- Hatch cross -->
+      <line x1="150" y1="157" x2="150" y2="199" stroke="#4a80a0" stroke-width="1" opacity="0.7"/>
+      <line x1="128" y1="178" x2="172" y2="178" stroke="#4a80a0" stroke-width="1" opacity="0.7"/>
+
+      <!-- ══ CABIN SHADOW (cast) ══ -->
+      <rect x="84" y="220" width="132" height="152" rx="18"
+            fill="#000" opacity="0.22" transform="translate(6,9)"/>
+
+      <!-- ══ CABIN WALLS (white gelcoat visible at edge) ══ -->
+      <rect x="84" y="220" width="132" height="152" rx="18"
+            fill="#dce6f0" stroke="#b0bece" stroke-width="1.5"/>
+
+      <!-- ══ HARDTOP ROOF ══ -->
+      <rect x="92" y="226" width="116" height="140" rx="14"
+            fill="url(#gHardtop)" filter="url(#fShadowCabin)"/>
+
+      <!-- Hardtop surface details -->
+      <rect x="108" y="248" width="84" height="6" rx="3" fill="#8a9aac" opacity="0.5"/>
+      <rect x="116" y="312" width="68" height="5" rx="2" fill="#8a9aac" opacity="0.4"/>
+      <!-- Radar dome -->
+      <ellipse cx="150" cy="252" rx="12" ry="9" fill="#c8d4e0" stroke="#98a8b8" stroke-width="1"/>
+      <ellipse cx="150" cy="251" rx="7" ry="5"  fill="#d8e4f0"/>
+      <!-- GPS antenna -->
+      <circle cx="150" cy="234" r="5.5" fill="#cc1818" stroke="#990000" stroke-width="1.2"/>
+      <circle cx="150" cy="234" r="2.5" fill="#fff"/>
+
+      <!-- Hardtop arch rails (visible edges) -->
+      <rect x="92"  y="219" width="116" height="9" rx="4" fill="#c8d4de" opacity="0.9"/>
+      <rect x="92"  y="358" width="116" height="9" rx="4" fill="#b0bece" opacity="0.8"/>
+      <rect x="92"  y="223" width="9" height="140" rx="4" fill="#bccad8" opacity="0.7"/>
+      <rect x="199" y="223" width="9" height="140" rx="4" fill="#bccad8" opacity="0.7"/>
+
+      <!-- ══ WINDOWS — PORT SIDE STRIP ══ -->
+      <rect x="84" y="240" width="17" height="106" rx="7"
+            fill="url(#gGlass)" stroke="#4a7898" stroke-width="1"/>
+      <!-- Glass glint -->
+      <rect x="86" y="242" width="9" height="50" rx="5" fill="url(#gGlint)"/>
+      <!-- Window divider -->
+      <rect x="84" y="292" width="17" height="2.5" fill="#2a5878" opacity="0.7"/>
+      <!-- Window frame lines -->
+      <rect x="84" y="240" width="17" height="1.5" fill="#6090b0" opacity="0.8"/>
+      <rect x="84" y="344" width="17" height="1.5" fill="#6090b0" opacity="0.8"/>
+
+      <!-- ══ WINDOWS — STBD SIDE STRIP ══ -->
+      <rect x="199" y="240" width="17" height="106" rx="7"
+            fill="url(#gGlass)" stroke="#4a7898" stroke-width="1"/>
+      <rect x="201" y="242" width="9" height="50" rx="5" fill="url(#gGlint)"/>
+      <rect x="199" y="292" width="17" height="2.5" fill="#2a5878" opacity="0.7"/>
+      <rect x="199" y="240" width="17" height="1.5" fill="#6090b0" opacity="0.8"/>
+      <rect x="199" y="344" width="17" height="1.5" fill="#6090b0" opacity="0.8"/>
+
+      <!-- ══ FRONT WINDSHIELD ══ -->
+      <rect x="102" y="222" width="96" height="28" rx="8"
+            fill="url(#gGlass)" stroke="#4a7898" stroke-width="1"/>
+      <rect x="104" y="224" width="46" height="14" rx="5" fill="url(#gGlint)"/>
+      <!-- Center post -->
+      <rect x="148" y="222" width="4" height="28" fill="#5888a8" opacity="0.8"/>
+      <!-- Wiper detail -->
+      <line x1="104" y1="248" x2="146" y2="228" stroke="#7090a8" stroke-width="1" opacity="0.5"/>
+      <line x1="196" y1="248" x2="154" y2="228" stroke="#7090a8" stroke-width="1" opacity="0.5"/>
+
+      <!-- ══ RED HULL ACCENT STRIPES ══ -->
+      <rect x="42"  y="310" width="12" height="58" rx="5" fill="#b82818" opacity="0.88"/>
+      <rect x="246" y="310" width="12" height="58" rx="5" fill="#b82818" opacity="0.88"/>
+
+      <!-- ══ COCKPIT (teak floor) ══ -->
+      <path d="
+        M 70,370 L 70,414
+        C 70,436, 96,446, 150,448
+        C 204,446, 230,436, 230,414
+        L 230,370 Z
+      " fill="url(#pTeak)"/>
+      <!-- Helm console -->
+      <rect x="118" y="368" width="64" height="16" rx="6"
+            fill="#1e2e3e" stroke="#2a3e4e" stroke-width="1"/>
+      <!-- Throttle levers -->
+      <rect x="128" y="370" width="7" height="12" rx="2" fill="#404e5c"/>
+      <rect x="138" y="369" width="7" height="12" rx="2" fill="#404e5c"/>
+      <rect x="155" y="370" width="7" height="12" rx="2" fill="#404e5c"/>
+      <!-- Helm seat -->
+      <rect x="106" y="372" width="88" height="16" rx="7" fill="#6a4820"/>
+      <!-- Rear U-bench -->
+      <path d="M 76,412 L 224,412 L 224,432
+               C 224,442, 202,448, 150,449
+               C 98,448, 76,442, 76,432 Z"
+            fill="#6a4820"/>
+      <!-- Side benches -->
+      <rect x="74"  y="374" width="18" height="38" rx="6" fill="#6a4820"/>
+      <rect x="208" y="374" width="18" height="38" rx="6" fill="#6a4820"/>
+      <!-- Centre table -->
+      <rect x="128" y="392" width="44" height="16" rx="5" fill="#8a6030"/>
+
+      <!-- Cleats port -->
+      <rect x="46"  y="195" width="11" height="7" rx="2.5" fill="#607080"/>
+      <rect x="44"  y="278" width="11" height="7" rx="2.5" fill="#607080"/>
+      <rect x="44"  y="360" width="11" height="7" rx="2.5" fill="#607080"/>
+      <!-- Cleats stbd -->
+      <rect x="243" y="195" width="11" height="7" rx="2.5" fill="#607080"/>
+      <rect x="245" y="278" width="11" height="7" rx="2.5" fill="#607080"/>
+      <rect x="245" y="360" width="11" height="7" rx="2.5" fill="#607080"/>
+
+      <!-- Safety rails (dashed) -->
+      <line x1="58" y1="164" x2="58" y2="445"
+            stroke="#d4c090" stroke-width="1" opacity="0.3" stroke-dasharray="6,5"/>
+      <line x1="242" y1="164" x2="242" y2="445"
+            stroke="#d4c090" stroke-width="1" opacity="0.3" stroke-dasharray="6,5"/>
+
+      <!-- ══ SWIM PLATFORM ══ -->
+      <path d="
+        M 82,444 L 218,444
+        L 220,462 C 220,472, 200,480, 150,480
+        C 100,480, 80,472, 80,462 Z
+      " fill="url(#gSwim)" stroke="#a0aab4" stroke-width="1"/>
+      <!-- Swim ladder rungs -->
+      <line x1="144" y1="463" x2="156" y2="463" stroke="#7a8a98" stroke-width="2.5" stroke-linecap="round"/>
+      <line x1="144" y1="471" x2="156" y2="471" stroke="#7a8a98" stroke-width="2.5" stroke-linecap="round"/>
+
+      <!-- ══ PORT MOTOR ══ -->
+      <rect x="66" y="466" width="38" height="44" rx="9"
+            fill="url(#gMotor)" stroke="#0c1a28" stroke-width="1.5"/>
+      <!-- Motor leg/shaft -->
+      <rect x="78" y="504" width="14" height="20" rx="4" fill="#18283a"/>
+      <!-- Cowl vents -->
+      <line x1="72" y1="476" x2="98" y2="476" stroke="#28384a" stroke-width="1.2"/>
+      <line x1="72" y1="482" x2="98" y2="482" stroke="#28384a" stroke-width="1.2"/>
+      <line x1="72" y1="488" x2="98" y2="488" stroke="#28384a" stroke-width="1.2"/>
+      <line x1="72" y1="494" x2="98" y2="494" stroke="#28384a" stroke-width="1.2"/>
+      <!-- Motor brand stripe -->
+      <rect x="70" y="470" width="34" height="4" rx="1.5" fill="#1e3a5a" opacity="0.6"/>
+
+      <!-- Port prop thrust arrows -->
+      <g id="port-arr-fwd" opacity="0" filter="url(#fGlowGreen)">
+        <polygon points="85,478  77,496  93,496" fill="#00ee88"/>
+      </g>
+      <g id="port-arr-aft" opacity="0" filter="url(#fGlowRed)">
+        <polygon points="85,552  77,534  93,534" fill="#ff3a3a"/>
+      </g>
+      <!-- PORT PROPELLER -->
+      <g id="port-prop-pivot" transform="translate(85,528)">
+        <g id="port-prop" class="blade-grp">
+          <ellipse cx="0" cy="-18" rx="12" ry="23" fill="url(#gBlade)" opacity="0.96"/>
+          <ellipse cx="0" cy="-18" rx="12" ry="23" fill="url(#gBlade)" opacity="0.96"
+                   transform="rotate(120)"/>
+          <ellipse cx="0" cy="-18" rx="12" ry="23" fill="url(#gBlade)" opacity="0.96"
+                   transform="rotate(240)"/>
+          <circle  cx="0" cy="0" r="8"   fill="#28486a"/>
+          <circle  cx="0" cy="0" r="3.5" fill="#4a7298"/>
+        </g>
+        <!-- Port rudder -->
+        <g id="port-rudder">
+          <rect x="-5" y="24" width="10" height="26" rx="3.5"
+                fill="#0e1e30" stroke="#1a2e40" stroke-width="1"/>
+        </g>
+      </g>
+
+      <!-- ══ STBD MOTOR ══ -->
+      <rect x="196" y="466" width="38" height="44" rx="9"
+            fill="url(#gMotor)" stroke="#0c1a28" stroke-width="1.5"/>
+      <rect x="208" y="504" width="14" height="20" rx="4" fill="#18283a"/>
+      <line x1="202" y1="476" x2="228" y2="476" stroke="#28384a" stroke-width="1.2"/>
+      <line x1="202" y1="482" x2="228" y2="482" stroke="#28384a" stroke-width="1.2"/>
+      <line x1="202" y1="488" x2="228" y2="488" stroke="#28384a" stroke-width="1.2"/>
+      <line x1="202" y1="494" x2="228" y2="494" stroke="#28384a" stroke-width="1.2"/>
+      <rect x="196" y="470" width="34" height="4" rx="1.5" fill="#1e3a5a" opacity="0.6"/>
+
+      <!-- Stbd prop thrust arrows -->
+      <g id="stbd-arr-fwd" opacity="0" filter="url(#fGlowGreen)">
+        <polygon points="215,478  207,496  223,496" fill="#00ee88"/>
+      </g>
+      <g id="stbd-arr-aft" opacity="0" filter="url(#fGlowRed)">
+        <polygon points="215,552  207,534  223,534" fill="#ff3a3a"/>
+      </g>
+      <!-- STBD PROPELLER -->
+      <g id="stbd-prop-pivot" transform="translate(215,528)">
+        <g id="stbd-prop" class="blade-grp">
+          <ellipse cx="0" cy="-18" rx="12" ry="23" fill="url(#gBlade)" opacity="0.96"/>
+          <ellipse cx="0" cy="-18" rx="12" ry="23" fill="url(#gBlade)" opacity="0.96"
+                   transform="rotate(120)"/>
+          <ellipse cx="0" cy="-18" rx="12" ry="23" fill="url(#gBlade)" opacity="0.96"
+                   transform="rotate(240)"/>
+          <circle  cx="0" cy="0" r="8"   fill="#28486a"/>
+          <circle  cx="0" cy="0" r="3.5" fill="#4a7298"/>
+        </g>
+        <!-- Stbd rudder -->
+        <g id="stbd-rudder">
+          <rect x="-5" y="24" width="10" height="26" rx="3.5"
+                fill="#0e1e30" stroke="#1a2e40" stroke-width="1"/>
+        </g>
+      </g>
+
+      <!-- ══ STERN THRUSTER ══ -->
+      <!-- Port opening -->
+      <rect x="74" y="462" width="24" height="20" rx="7"
+            fill="#0a1828" stroke="#1a3050" stroke-width="1.5"/>
+      <!-- Stbd opening -->
+      <rect x="202" y="462" width="24" height="20" rx="7"
+            fill="#0a1828" stroke="#1a3050" stroke-width="1.5"/>
+      <!-- Tunnel -->
+      <rect x="94" y="464" width="112" height="16" rx="8"
+            fill="#0e1e34" opacity="0.9"/>
+      <rect x="98" y="465" width="104" height="6" rx="3"
+            fill="#1a2e48" opacity="0.6"/>
+      <!-- Stern thrust arrows -->
+      <g id="stern-arr-left" opacity="0" filter="url(#fGlowGreen)">
+        <polygon points="64,472  82,463  82,481" fill="#00ee88"/>
+      </g>
+      <g id="stern-arr-right" opacity="0" filter="url(#fGlowGreen)">
+        <polygon points="236,472  218,463  218,481" fill="#00ee88"/>
+      </g>
+      <!-- Stern thruster propeller -->
+      <g id="stern-prop-pivot" transform="translate(150,472)">
+        <g id="stern-prop" class="blade-grp">
+          <ellipse cx="-18" cy="0" rx="23" ry="11" fill="url(#gThrBlade)" opacity="0.93"/>
+          <ellipse cx="-18" cy="0" rx="23" ry="11" fill="url(#gThrBlade)" opacity="0.93"
+                   transform="rotate(180)"/>
+          <circle  cx="0" cy="0" r="6.5" fill="#28486a"/>
+          <circle  cx="0" cy="0" r="3"   fill="#4a7298"/>
+        </g>
+      </g>
+
+      <!-- Rudder angle label -->
+      <text id="rudder-lbl" x="150" y="557" text-anchor="middle"
+            font-size="9" fill="#1e4060" letter-spacing="1.2"
+            font-family="'Courier New', monospace">LEME  0°</text>
+    </svg>
+
+    <div class="boat-lbl">▼ Popa</div>
+  </div>
+
+
+  <!-- ══════════════════════════════════════
+       CONTROLS PANEL
+  ══════════════════════════════════════ -->
+  <div class="controls">
+
+    <!-- Configuração de thrusters -->
+    <div class="cfg-section">
+      <div class="cfg-section-lbl">Equipamentos instalados</div>
+      <div class="cfg-row">
+        <span class="cfg-row-lbl">Bow Thruster</span>
+        <button class="cfg-toggle on" id="cfg-bow">● Sim</button>
+      </div>
+      <div class="cfg-row">
+        <span class="cfg-row-lbl">Stern Thruster</span>
+        <button class="cfg-toggle on" id="cfg-stern">● Sim</button>
+      </div>
+    </div>
+
+    <!-- Bow thruster — acima do joystick -->
+    <div class="thr-row" id="bow-thr-row">
+      <button class="thr-btn" id="bow-port-btn">◀ BB</button>
+      <span class="thr-row-lbl">Bow Thruster</span>
+      <button class="thr-btn" id="bow-stbd-btn">BE ▶</button>
+    </div>
+
+    <div class="joy-section">
+      <div class="joy-title">Joystick de Propulsão</div>
+      <div class="joy-hint">
+        Arraste o centro → Avanço / Deriva<br>
+        Arraste o anel externo → Guinada
+      </div>
+
+      <!-- JOYSTICK -->
+      <div class="joy-outer" id="joy-outer">
+
+        <svg class="joy-svg" viewBox="0 0 220 220" id="joy-svg">
+          <!-- ── ROTATION RING background ── -->
+          <circle cx="110" cy="110" r="93"
+                  fill="none" stroke="#132030" stroke-width="24"/>
+
+          <!-- Ring texture dots -->
+          <circle cx="110" cy="110" r="93"
+                  fill="none" stroke="#1c3248" stroke-width="22"
+                  stroke-dasharray="2,14"/>
+
+          <!-- Rotation arc (JS updates) -->
+          <path id="rot-arc" fill="none" stroke="#4a9ad4" stroke-width="20"
+                stroke-linecap="round" d="" opacity="0.85"/>
+
+          <!-- Ring tick marks at key angles -->
+          <g stroke="#243a52" stroke-width="1.5" stroke-linecap="round">
+            <!-- 0° top -->
+            <line x1="110" y1="5"   x2="110" y2="18"/>
+            <!-- ±30° -->
+            <line x1="156.5" y1="19" x2="151" y2="28.5"/>
+            <line x1="63.5"  y1="19" x2="69"  y2="28.5"/>
+            <!-- ±60° -->
+            <line x1="194" y1="56.5" x2="184.5" y2="61"/>
+            <line x1="26"  y1="56.5" x2="35.5"  y2="61"/>
+            <!-- ±90° sides -->
+            <line x1="215" y1="110" x2="202" y2="110"/>
+            <line x1="5"   y1="110" x2="18"  y2="110"/>
+          </g>
+
+          <!-- Ring labels -->
+          <text x="110" y="13"  text-anchor="middle" font-size="8" fill="#2a5070" font-family="monospace">0°</text>
+          <text x="24"  y="114" text-anchor="middle" font-size="8" fill="#2a5070">BB</text>
+          <text x="196" y="114" text-anchor="middle" font-size="8" fill="#2a5070">BE</text>
+
+
+          <!-- Rotation marker dot -->
+          <circle id="rot-marker" cx="110" cy="17" r="8"
+                  fill="#4a9ad4" stroke="#8ad4f8" stroke-width="2.5"/>
+
+          <!-- ── XY ZONE ── -->
+          <!-- XY boundary ring -->
+          <circle cx="110" cy="110" r="78"
+                  fill="none" stroke="#1a3050" stroke-width="1.2" stroke-dasharray="4,5"/>
+
+          <!-- Crosshair lines -->
+          <line x1="110" y1="34"  x2="110" y2="186" stroke="#1a3050" stroke-width="1"/>
+          <line x1="34"  y1="110" x2="186" y2="110" stroke="#1a3050" stroke-width="1"/>
+
+          <!-- Inner reference ring -->
+          <circle cx="110" cy="110" r="38"
+                  fill="none" stroke="#142840" stroke-width="1"/>
+
+          <!-- Cardinal labels inside XY -->
+          <text x="110" y="41"  text-anchor="middle" font-size="8" fill="#2a5070">AV</text>
+          <text x="110" y="183" text-anchor="middle" font-size="8" fill="#2a5070">RÉ</text>
+          <text x="38"  y="114" text-anchor="middle" font-size="8" fill="#2a5070">BB</text>
+          <text x="182" y="114" text-anchor="middle" font-size="8" fill="#2a5070">BE</text>
+        </svg>
+
+        <!-- Draggable XY handle -->
+        <div class="joy-handle" id="joy-handle"></div>
+      </div>
+    </div>
+
+    <!-- Stern thruster — abaixo do joystick -->
+    <div class="thr-row" id="stern-thr-row">
+      <button class="thr-btn" id="stern-port-btn">◀ BB</button>
+      <span class="thr-row-lbl">Stern Thruster</span>
+      <button class="thr-btn" id="stern-stbd-btn">BE ▶</button>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- READOUTS -->
+    <div class="rdrow">
+      <div class="rdout">
+        <div class="rdout-lbl">Avanço</div>
+        <div class="rdout-val" id="v-surge">0%</div>
+      </div>
+      <div class="rdout">
+        <div class="rdout-lbl">Deriva</div>
+        <div class="rdout-val" id="v-sway">0%</div>
+      </div>
+      <div class="rdout">
+        <div class="rdout-lbl">Guinada</div>
+        <div class="rdout-val" id="v-yaw">0%</div>
+      </div>
+    </div>
+
+    <!-- PROPULSION BARS -->
+    <div class="sec-lbl">Atuação dos Propulsores</div>
+    <div class="prop-grid">
+      <div class="prop-card">
+        <div class="prop-lbl">🛥 Hélice BB</div>
+        <div class="prop-track"><div class="prop-fill" id="fill-port"></div></div>
+        <div class="prop-num" id="num-port">0%</div>
+      </div>
+      <div class="prop-card">
+        <div class="prop-lbl">🛥 Hélice BE</div>
+        <div class="prop-track"><div class="prop-fill" id="fill-stbd"></div></div>
+        <div class="prop-num" id="num-stbd">0%</div>
+      </div>
+      <div class="prop-card">
+        <div class="prop-lbl">↔ Bow Thruster</div>
+        <div class="prop-track"><div class="prop-fill" id="fill-bow"></div></div>
+        <div class="prop-num" id="num-bow">0%</div>
+      </div>
+      <div class="prop-card">
+        <div class="prop-lbl">↔ Stern Thruster</div>
+        <div class="prop-track"><div class="prop-fill" id="fill-stern"></div></div>
+        <div class="prop-num" id="num-stern">0%</div>
+      </div>
+    </div>
+
+    <button class="btn-reset" id="btn-reset">⊕ Centralizar Tudo</button>
+
+  </div><!-- /controls -->
+</div><!-- /main -->
+</div><!-- /page-content -->
+
+<script>
+// ══════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════
+const state  = { surge:0, sway:0, yaw:0 };
+const thrust = { port:0, stbd:0, bow:0, stern:0 };
+
+// Thruster buttons: -1=BB, 0=off, +1=BE
+let bowBtn   = 0;
+let sternBtn = 0;
+
+// Thruster config
+let hasBow   = true;
+let hasStern = true;
+
+function setupCfgToggle(cfgId, rowId, getVal, setVal, clearBtn) {
+  const btn = document.getElementById(cfgId);
+  const row = document.getElementById(rowId);
+  const refresh = () => {
+    const on = getVal();
+    btn.textContent = on ? '● Sim' : '○ Não';
+    btn.classList.toggle('on', on);
+    if (row) row.classList.toggle('disabled', !on);
+    if (!on) { clearBtn(); updateAll(); }
+  };
+  btn.addEventListener('click', () => { setVal(!getVal()); refresh(); });
+  refresh();
+}
+setupCfgToggle('cfg-bow',   'bow-thr-row',
+  () => hasBow,   v => { hasBow   = v; },
+  () => { bowBtn   = 0; document.querySelectorAll('#bow-port-btn,#bow-stbd-btn').forEach(b => b.classList.remove('active')); });
+setupCfgToggle('cfg-stern', 'stern-thr-row',
+  () => hasStern, v => { hasStern = v; },
+  () => { sternBtn = 0; document.querySelectorAll('#stern-port-btn,#stern-stbd-btn').forEach(b => b.classList.remove('active')); });
+
+// ══════════════════════════════════════════════════
+// JOYSTICK GEOMETRY
+// Joystick outer div: 220 × 220 px (radius = 110)
+// SVG viewBox 0 0 220 220 → 1 SVG unit = 1 CSS px
+// Ring stroke at r=93, width=24 → inner edge at r=81
+// XY zone: r < 81, handle radius = 32
+// ══════════════════════════════════════════════════
+const JOY_R     = 110;  // outer div radius in CSS px
+const RING_IN   = 81;   // inner edge of rotation ring in CSS px
+const HANDLE_R  = 32;   // handle radius
+const XY_MAX    = RING_IN - HANDLE_R - 2;  // = 47 px max handle travel
+
+const joyOuter  = document.getElementById('joy-outer');
+const joyHandle = document.getElementById('joy-handle');
+
+let xyMode  = false;
+let rotMode = false;
+
+function joyCenter() {
+  const r = joyOuter.getBoundingClientRect();
+  return { x: r.left + r.width * 0.5, y: r.top + r.height * 0.5 };
+}
+
+// ── Handle → XY mode ──
+joyHandle.addEventListener('mousedown', e => {
+  xyMode = true;
+  joyHandle.classList.add('active');
+  e.preventDefault();
+  e.stopPropagation();
+});
+joyHandle.addEventListener('touchstart', e => {
+  xyMode = true;
+  joyHandle.classList.add('active');
+  e.preventDefault();
+  e.stopPropagation();
+}, { passive:false });
+
+// ── Outer div → Rotation mode (ring zone only) ──
+joyOuter.addEventListener('mousedown', e => {
+  if (e.target === joyHandle) return;
+  const c = joyCenter();
+  const dist = Math.hypot(e.clientX - c.x, e.clientY - c.y);
+  if (dist >= RING_IN * 0.80) {          // slight inner tolerance
+    rotMode = true;
+    applyRot(e.clientX - c.x, e.clientY - c.y);
+    e.preventDefault();
+  }
+});
+joyOuter.addEventListener('touchstart', e => {
+  if (e.target === joyHandle) return;
+  const t = e.touches[0];
+  const c = joyCenter();
+  const dist = Math.hypot(t.clientX - c.x, t.clientY - c.y);
+  if (dist >= RING_IN * 0.80) {
+    rotMode = true;
+    applyRot(t.clientX - c.x, t.clientY - c.y);
+    e.preventDefault();
+  }
+}, { passive:false });
+
+// ── Global move ──
+document.addEventListener('mousemove', e => {
+  if (!xyMode && !rotMode) return;
+  const c = joyCenter();
+  if (xyMode)  applyXY(e.clientX - c.x, e.clientY - c.y);
+  if (rotMode) applyRot(e.clientX - c.x, e.clientY - c.y);
+});
+document.addEventListener('touchmove', e => {
+  if (!xyMode && !rotMode) return;
+  const t = e.touches[0];
+  const c = joyCenter();
+  if (xyMode)  applyXY(t.clientX - c.x, t.clientY - c.y);
+  if (rotMode) applyRot(t.clientX - c.x, t.clientY - c.y);
+  e.preventDefault();
+}, { passive:false });
+
+// ── Release → spring back ──
+function onRelease() {
+  if (xyMode) {
+    xyMode = false;
+    joyHandle.classList.remove('active');
+    joyHandle.style.transform = 'translate(-50%, -50%)';
+    state.surge = 0; state.sway = 0;
+  }
+  if (rotMode) {
+    rotMode = false;
+    state.yaw = 0;
+  }
+  updateAll();
+}
+document.addEventListener('mouseup',  onRelease);
+document.addEventListener('touchend', onRelease);
+
+function applyXY(dx, dy) {
+  const dist = Math.hypot(dx, dy);
+  if (dist > XY_MAX) { dx = dx / dist * XY_MAX; dy = dy / dist * XY_MAX; }
+  joyHandle.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+  state.sway  =  dx / XY_MAX;
+  state.surge = -dy / XY_MAX;
+  updateAll();
+}
+
+function applyRot(dx, dy) {
+  // atan2(x, -y): 0 at top (12 o'clock), positive = clockwise = starboard
+  const angle   = Math.atan2(dx, -dy);
+  const MAX_ANG = Math.PI * 0.65;   // ±117° full scale
+  state.yaw = clamp(angle / MAX_ANG, -1, 1);
+  updateAll();
+}
+
+// ══════════════════════════════════════════════════
+// ROTATION RING VISUALISATION
+// ══════════════════════════════════════════════════
+// SVG ring is at cx=110, cy=110, r=93 (matches CSS px)
+const SVG_CX = 110, SVG_CY = 110, RING_R = 93;
+
+function polar(cx, cy, r, deg) {
+  const rad = (deg - 90) * Math.PI / 180;
+  return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+}
+
+function arcPath(cx, cy, r, fromDeg, toDeg) {
+  if (Math.abs(toDeg - fromDeg) < 0.5) return '';
+  const s = polar(cx, cy, r, fromDeg);
+  const e = polar(cx, cy, r, toDeg);
+  const large = Math.abs(toDeg - fromDeg) > 180 ? 1 : 0;
+  const sweep = toDeg > fromDeg ? 1 : 0;
+  return `M${s.x.toFixed(1)},${s.y.toFixed(1)} A${r},${r} 0 ${large},${sweep} ${e.x.toFixed(1)},${e.y.toFixed(1)}`;
+}
+
+function updateRotViz() {
+  const arc    = document.getElementById('rot-arc');
+  const marker = document.getElementById('rot-marker');
+  const yaw = state.yaw;
+  const deg = yaw * 117;   // ±117° maps to ±100%
+
+  if (Math.abs(deg) < 0.8) {
+    arc.setAttribute('d', '');
+    marker.setAttribute('cx', SVG_CX);
+    marker.setAttribute('cy', SVG_CY - RING_R);
+    marker.setAttribute('fill', '#4a9ad4');
+    marker.setAttribute('stroke', '#8ad4f8');
+    return;
+  }
+
+  arc.setAttribute('d', arcPath(SVG_CX, SVG_CY, RING_R, 0, deg));
+  const col = yaw > 0 ? '#4a9ad4' : '#d44a4a';
+  arc.setAttribute('stroke', col);
+
+  const mp = polar(SVG_CX, SVG_CY, RING_R, deg);
+  marker.setAttribute('cx', mp.x.toFixed(1));
+  marker.setAttribute('cy', mp.y.toFixed(1));
+  marker.setAttribute('fill', col);
+  marker.setAttribute('stroke', yaw > 0 ? '#8ad4f8' : '#f88a8a');
+}
+
+// ══════════════════════════════════════════════════
+// PROPULSION RULES
+// ─────────────────────────────────────────────────
+// Convenções de sinal:
+//   surge > 0 → avante         surge < 0 → à ré
+//   sway  > 0 → deriva a BE    sway  < 0 → deriva a BB
+//   yaw   > 0 → giro BE (CW)   yaw   < 0 → giro BB (CCW)
+//
+// Hélices CONTRA-ROTATIVAS:
+//   Porto (BB)   avante → gira CCW (para a esquerda)
+//   Boreste (BE) avante → gira CW  (para a direita)
+//
+// Zonas do joystick XY:
+//   Zona 1 – Longitudinal  (|surge| ≥ 2×|sway|) → AMBOS os motores
+//   Zona 2 – Lateral pura  (|sway|  ≥ 2×|surge|) → THRUSTERS (bow+stern)
+//   Zona 3 – Diagonal       (entre as zonas acima) → só 1 motor:
+//              sway < 0 (diag-esquerda)  → APENAS estibordo
+//              sway > 0 (diag-direita)   → APENAS porto
+//
+// Thrusters individuais: controlados pelos botões (sem joystick)
+// ══════════════════════════════════════════════════
+function calcThrust() {
+  const { surge, sway, yaw } = state;
+
+  thrust.port = 0;
+  thrust.stbd = 0;
+  let joyBow = 0, joyStern = 0;
+
+  // ── YAW via anel de rotação: empuxo diferencial ──
+  if (Math.abs(yaw) > 0.015) {
+    // yaw > 0 (CW/BE): porto avante + boreste à ré
+    thrust.port = clamp( yaw, -1, 1);
+    thrust.stbd = clamp(-yaw, -1, 1);
+    // No yaw mode, thrusters só pelos botões
+    thrust.bow   = clamp(bowBtn,   -1, 1);
+    thrust.stern = clamp(sternBtn, -1, 1);
+    return;
+  }
+
+  // ── JOYSTICK XY: lógica por zona ──
+  const absSurge = Math.abs(surge);
+  const absSway  = Math.abs(sway);
+  const mag      = Math.hypot(surge, sway);
+
+  if (mag >= 0.02) {
+
+    if (absSurge >= absSway * 2) {
+      // ── Zona 1: longitudinal → AMBOS OS MOTORES ──
+      thrust.port = surge;
+      thrust.stbd = surge;
+
+    } else if (absSway >= absSurge * 2) {
+      // ── Zona 2: lateral pura → SÓ THRUSTERS ──
+      joyBow   = sway;
+      joyStern = sway;
+
+    } else {
+      // ── Zona 3: diagonal → UM MOTOR apenas ──
+      if (sway < 0) {
+        // Diagonal esquerda → só estibordo (direito)
+        thrust.stbd = surge;
+      } else {
+        // Diagonal direita → só porto (esquerdo)
+        thrust.port = surge;
+      }
+      // Sem thrusters na diagonal
+    }
+  }
+
+  // Combinar joystick + botões nos thrusters (respeitando config de equipamentos)
+  thrust.bow   = hasBow   ? clamp(joyBow   + bowBtn,   -1, 1) : 0;
+  thrust.stern = hasStern ? clamp(joyStern + sternBtn,  -1, 1) : 0;
+}
+
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+// ══════════════════════════════════════════════════
+// ANIMATIONS
+// ══════════════════════════════════════════════════
+
+/**
+ * Gira uma hélice.
+ * @param {string} id      – id do .blade-grp
+ * @param {number} val     – empuxo -1…1
+ * @param {boolean} invertCW – se true, sentido POSITIVO = CCW (porta, hélice sinistrogira)
+ */
+function spinProp(id, val, invertCW = false) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const abs = Math.abs(val);
+  if (abs < 0.018) { el.style.animationPlayState = 'paused'; return; }
+  el.style.animationDuration = (1.5 / abs) + 's';
+  // Porto (BB): avante → gira CCW → invertCW=true → val>0 → 'spin-ccw'
+  // Estibordo: avante → gira CW  → invertCW=false → val>0 → 'spin-cw'
+  const goFwd = val > 0;
+  const isCW  = invertCW ? !goFwd : goFwd;
+  el.style.animationName      = isCW ? 'spin-cw' : 'spin-ccw';
+  el.style.animationPlayState = 'running';
+}
+
+function setArrow(id, show) {
+  const el = document.getElementById(id);
+  if (el) el.setAttribute('opacity', show ? '1' : '0');
+}
+
+function updateAnims() {
+  // Hélices contra-rotativas:
+  //   Porto  avante = CCW → invertCW: true
+  //   Estibordo avante = CW → invertCW: false (padrão)
+  spinProp('port-prop',  thrust.port,  true);   // BB: CCW avante
+  spinProp('stbd-prop',  thrust.stbd,  false);  // BE: CW avante
+  spinProp('bow-prop',   thrust.bow,   false);
+  spinProp('stern-prop', thrust.stern, false);
+
+  // Setas propulsores principais
+  setArrow('port-arr-fwd',   thrust.port >  0.04);
+  setArrow('port-arr-aft',   thrust.port < -0.04);
+  setArrow('stbd-arr-fwd',   thrust.stbd >  0.04);
+  setArrow('stbd-arr-aft',   thrust.stbd < -0.04);
+
+  // Setas thrusters (positivo = BE, negativo = BB)
+  setArrow('bow-arr-right',   thrust.bow   >  0.04);
+  setArrow('bow-arr-left',    thrust.bow   < -0.04);
+  setArrow('stern-arr-right', thrust.stern >  0.04);
+  setArrow('stern-arr-left',  thrust.stern < -0.04);
+
+  // Lemes: yaw → ângulo ±38°
+  const ang = state.yaw * 38;
+  const pr = document.getElementById('port-rudder');
+  const sr = document.getElementById('stbd-rudder');
+  if (pr) pr.setAttribute('transform', `rotate(${ang.toFixed(1)}, 0, 24)`);
+  if (sr) sr.setAttribute('transform', `rotate(${ang.toFixed(1)}, 0, 24)`);
+
+  const lbl = document.getElementById('rudder-lbl');
+  if (lbl) lbl.textContent = `LEME  ${ang >= 0 ? '+' : ''}${ang.toFixed(0)}°`;
+
+}
+
+// ══════════════════════════════════════════════════
+// READOUTS
+// ══════════════════════════════════════════════════
+const pct  = v => Math.round(v * 100);
+const sign = v => v > 0 ? '+' : '';
+
+function setRdout(id, v) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = `${sign(v)}${pct(v)}%`;
+  el.className = 'rdout-val ' + (v > 0.02 ? 'pos' : v < -0.02 ? 'neg' : '');
+}
+
+function setBar(fid, nid, v) {
+  const fill = document.getElementById(fid);
+  const num  = document.getElementById(nid);
+  if (!fill || !num) return;
+  const abs = Math.abs(v) * 100;
+  if (v >= 0) {
+    fill.style.left = '50%';
+    fill.style.width = (abs / 2) + '%';
+    fill.style.background = '#26d46a';
+  } else {
+    fill.style.left = (50 - abs / 2) + '%';
+    fill.style.width = (abs / 2) + '%';
+    fill.style.background = '#e04040';
+  }
+  num.textContent = `${sign(v)}${Math.round(abs)}%`;
+  num.style.color = v < -0.02 ? '#e04040' : v > 0.02 ? '#26d46a' : '#4a88b0';
+}
+
+function updateReadouts() {
+  setRdout('v-surge', state.surge);
+  setRdout('v-sway',  state.sway);
+  setRdout('v-yaw',   state.yaw);
+  setBar('fill-port',  'num-port',  thrust.port);
+  setBar('fill-stbd',  'num-stbd',  thrust.stbd);
+  setBar('fill-bow',   'num-bow',   thrust.bow);
+  setBar('fill-stern', 'num-stern', thrust.stern);
+}
+
+// ══════════════════════════════════════════════════
+// MASTER UPDATE
+// ══════════════════════════════════════════════════
+function updateAll() {
+  calcThrust();
+  updateAnims();
+  updateReadouts();
+  updateRotViz();
+}
+
+// ══════════════════════════════════════════════════
+// THRUSTER BUTTONS
+// ══════════════════════════════════════════════════
+function setupThrBtn(el, type, dir) {
+  if (!el) return;
+  const press = () => {
+    if (type === 'bow') bowBtn = dir;
+    else sternBtn = dir;
+    el.classList.add('active');
+    updateAll();
+  };
+  const release = () => {
+    if (type === 'bow') bowBtn = 0;
+    else sternBtn = 0;
+    el.classList.remove('active');
+    updateAll();
+  };
+  el.addEventListener('mousedown',   e => { press(); e.preventDefault(); });
+  el.addEventListener('mouseup',     release);
+  el.addEventListener('mouseleave',  release);
+  el.addEventListener('touchstart',  e => { press(); e.preventDefault(); }, { passive:false });
+  el.addEventListener('touchend',    release);
+  el.addEventListener('touchcancel', release);
+}
+
+setupThrBtn(document.getElementById('bow-port-btn'),   'bow',   -1);
+setupThrBtn(document.getElementById('bow-stbd-btn'),   'bow',   +1);
+setupThrBtn(document.getElementById('stern-port-btn'), 'stern', -1);
+setupThrBtn(document.getElementById('stern-stbd-btn'), 'stern', +1);
+
+// ══════════════════════════════════════════════════
+// RESET
+// ══════════════════════════════════════════════════
+document.getElementById('btn-reset').addEventListener('click', () => {
+  state.surge = 0; state.sway = 0; state.yaw = 0;
+  bowBtn = 0; sternBtn = 0;
+  joyHandle.style.transform = 'translate(-50%, -50%)';
+  // Limpar botões visualmente
+  document.querySelectorAll('.thr-btn').forEach(b => b.classList.remove('active'));
+  updateAll();
+});
+
+// Init
+updateAll();
+</script>
+</body>
+</html>

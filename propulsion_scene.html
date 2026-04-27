@@ -1,0 +1,2302 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simulador de Manobra — Marine Telematics</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  background: #09131f;
+  color: #b8d0e4;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  display: flex; flex-direction: column; align-items: center;
+  min-height: 100vh; padding: 16px; user-select: none;
+}
+header { text-align:center; margin-bottom:14px; }
+header h1 { font-size:13px; font-weight:400; letter-spacing:3px; color:#4a8ab0; text-transform:uppercase; }
+header p  { font-size:9px; letter-spacing:1.5px; color:#243a52; margin-top:3px; text-transform:uppercase; }
+.nav { margin-top:7px; }
+.nav a { font-size:9px; color:#1e4060; letter-spacing:1.5px; text-decoration:none;
+         text-transform:uppercase; border:1px solid #142238; padding:3px 10px;
+         border-radius:5px; transition:all .15s; }
+.nav a:hover { color:#4a88b0; border-color:#2a5070; }
+
+/* THR BUTTONS */
+.thr-row { display:flex; align-items:center; justify-content:space-between; width:100%; gap:8px; }
+.thr-row-lbl { font-size:9px; letter-spacing:1.5px; color:#1a3a58; text-transform:uppercase; flex:1; text-align:center; }
+.thr-btn {
+  background:#0a1a2c; border:1px solid #162840; color:#265880;
+  padding:7px 20px; border-radius:6px; cursor:pointer; font-size:10px;
+  letter-spacing:1.5px; text-transform:uppercase; transition:all 0.1s;
+  touch-action:none; -webkit-tap-highlight-color:transparent; min-width:90px;
+}
+.thr-btn:hover { background:#122030; color:#3a78a8; }
+.thr-btn.active {
+  background:#082820; border-color:#168048; color:#22e068;
+  box-shadow:0 0 14px #18e05840, inset 0 0 6px #10803820;
+}
+
+/* ── THRUSTER CONFIG ── */
+.cfg-section {
+  width:100%; background:#0a1624; border:1px solid #142238;
+  border-radius:8px; padding:8px 12px; display:flex; flex-direction:column; gap:6px;
+}
+.cfg-section-lbl { font-size:8px; letter-spacing:2px; color:#1a3050; text-transform:uppercase; }
+.cfg-row { display:flex; align-items:center; justify-content:space-between; }
+.cfg-row-lbl { font-size:9px; letter-spacing:1px; color:#2a4a68; text-transform:uppercase; }
+.cfg-toggle {
+  background:#0c1828; border:1px solid #162840; color:#2a4a6a;
+  padding:4px 14px; border-radius:10px; cursor:pointer; font-size:9px;
+  letter-spacing:1.5px; text-transform:uppercase; transition:all .2s; min-width:76px; text-align:center;
+}
+.cfg-toggle.on { background:#082820; border-color:#168048; color:#22e068; box-shadow:0 0 8px #18e05830; }
+.thr-row.disabled { opacity:0.22; pointer-events:none; }
+
+.main { display:flex; gap:22px; align-items:flex-start; justify-content:center; flex-wrap:wrap; }
+
+/* SCENE */
+.scene-panel { display:flex; flex-direction:column; align-items:center; gap:10px; }
+.scene-wrap {
+  position:relative; width:900px; height:700px;
+  border-radius:14px; overflow:hidden;
+  border:1px solid #1a3050; box-shadow:0 0 50px #000000aa;
+}
+.scene-bg, .scene-overlay {
+  position:absolute; inset:0; width:100%; height:100%; pointer-events:none;
+}
+.boat-wrap {
+  position:absolute; width:96px; height:179px;
+  transform-origin:50% 50%; pointer-events:none;
+  will-change:transform;
+}
+.vessel-svg { display:none; position:absolute; top:0; left:0; }
+.vessel-svg.active { display:block; }
+.vessel-picker { display:flex; gap:5px; flex-wrap:wrap; }
+.vessel-picker .cfg-toggle { min-width:60px; padding:4px 10px; flex:1; }
+.scene-foot { display:flex; align-items:center; gap:14px; width:100%; }
+.chrono {
+  position:absolute; top:10px; right:10px; z-index:10;
+  background:#0a1624ee; border:1px solid #1a3a52; border-radius:8px;
+  padding:6px 12px; text-align:center; pointer-events:none;
+  font-family:'Courier New',monospace;
+  box-shadow:0 2px 10px #00000099;
+}
+.chrono-lbl { font-size:8px; letter-spacing:2px; color:#1e4060; text-transform:uppercase; }
+.chrono-val { font-size:20px; font-weight:600; font-variant-numeric:tabular-nums;
+              color:#4a88b0; line-height:1.1; }
+.chrono.running .chrono-val { color:#e8c850; }
+.chrono.done    .chrono-val { color:#2ae07e; }
+.chrono.done    { border-color:#1a5040; background:#0c2820ee; }
+.scene-info { display:flex; gap:10px; flex:1; }
+.info-box { background:#0a1624; border:1px solid #142238; border-radius:7px; padding:5px 10px; text-align:center; }
+.info-lbl { font-size:8px; color:#1e4060; letter-spacing:1px; text-transform:uppercase; }
+.info-val { font-size:14px; font-weight:600; font-variant-numeric:tabular-nums; color:#4a88b0; font-family:'Courier New',monospace; }
+
+/* CONTROLS */
+.controls { display:flex; flex-direction:column; align-items:center; gap:14px; min-width:248px; }
+.joy-section { display:flex; flex-direction:column; align-items:center; gap:6px; }
+.joy-title { font-size:10px; letter-spacing:2px; color:#2a5070; text-transform:uppercase; }
+.joy-hint { font-size:9px; color:#1a3550; letter-spacing:0.5px; text-align:center; line-height:1.5; }
+.joy-outer {
+  width:220px; height:220px; border-radius:50%; position:relative; cursor:crosshair;
+  background:radial-gradient(circle at 50% 46%, #0f2038 50%, #07101e);
+  box-shadow:0 0 50px #00000099, inset 0 0 30px #00000066;
+}
+.joy-svg { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
+.joy-handle {
+  width:64px; height:64px; border-radius:50%;
+  background:radial-gradient(circle at 36% 30%, #6abae8, #1a4a82);
+  border:2px solid #3a90d0; position:absolute; top:50%; left:50%;
+  transform:translate(-50%,-50%); cursor:grab;
+  box-shadow:0 4px 20px #00000099, 0 0 16px #1a72b040;
+  z-index:2; transition:box-shadow 0.1s;
+}
+.joy-handle.active { cursor:grabbing; box-shadow:0 4px 28px #00000099, 0 0 28px #2a92e060; }
+
+/* READOUTS */
+.rdrow { display:flex; gap:8px; }
+.rdout { background:#0a1624; border:1px solid #142238; border-radius:8px; padding:7px 10px; text-align:center; min-width:66px; }
+.rdout-lbl { font-size:8px; color:#1e4060; letter-spacing:1px; text-transform:uppercase; margin-bottom:2px; }
+.rdout-val { font-size:15px; font-weight:600; font-variant-numeric:tabular-nums; color:#4a88b0; }
+.rdout-val.pos { color:#26d46a; }
+.rdout-val.neg { color:#e04040; }
+
+.divider { width:100%; height:1px; background:#142238; }
+.sec-lbl { font-size:9px; letter-spacing:2px; color:#1e4060; text-transform:uppercase; align-self:flex-start; }
+.prop-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; width:248px; }
+.prop-card { background:#0a1624; border:1px solid #142238; border-radius:8px; padding:9px 10px; }
+.prop-lbl  { font-size:9px; color:#1e4060; letter-spacing:0.8px; text-transform:uppercase; margin-bottom:5px; }
+.prop-track { height:7px; background:#0c1a2c; border-radius:4px; position:relative; overflow:hidden; }
+.prop-fill  { position:absolute; top:0; height:100%; border-radius:4px; transition:width .07s,left .07s,background .07s; }
+.prop-num   { font-size:11px; font-variant-numeric:tabular-nums; margin-top:4px; color:#4a88b0; }
+
+.btn-reset {
+  background:#0c1e30; border:1px solid #183050; color:#2a6088;
+  padding:8px 18px; border-radius:8px; cursor:pointer; font-size:11px;
+  letter-spacing:1.5px; text-transform:uppercase; transition:all .15s; white-space:nowrap;
+}
+.btn-reset:hover { background:#183050; color:#60a8d0; }
+
+/* MODE TOGGLE */
+.btn-mode {
+  background:#0c2030; border:1px solid #1a3a52; color:#2a6888;
+  padding:8px 16px; border-radius:8px; cursor:pointer; font-size:11px;
+  letter-spacing:1.5px; text-transform:uppercase; transition:all .2s; white-space:nowrap;
+}
+.btn-mode:hover { background:#162840; color:#50a8c8; }
+.btn-mode.ego   { background:#0c2820; border-color:#1a5040; color:#28a878; }
+.btn-mode.ego:hover { background:#183830; color:#40c898; }
+
+/* GAIN SLIDERS */
+.gain-wrap {
+  width:100%; background:#0a1624; border:1px solid #142238;
+  border-radius:8px; padding:9px 12px; display:flex; flex-direction:column; gap:7px;
+}
+.gain-section-lbl { font-size:8px; letter-spacing:2px; color:#1a3050; text-transform:uppercase; }
+.gain-row { display:flex; align-items:center; gap:7px; }
+.gain-lbl { font-size:8px; letter-spacing:1px; color:#1e4060; text-transform:uppercase; min-width:94px; }
+.gain-val { font-size:11px; font-weight:600; font-variant-numeric:tabular-nums;
+            color:#4a88b0; font-family:'Courier New',monospace; min-width:30px; text-align:right; }
+.gp-axis-sel {
+  flex:1; background:#0e1e34; color:#4a88b0; border:1px solid #1a3050;
+  border-radius:4px; padding:3px 5px; font-size:10px; font-family:'Courier New',monospace;
+  outline:none; cursor:pointer;
+}
+.gp-inv { display:flex; align-items:center; gap:4px; font-size:9px;
+          color:#2a5070; letter-spacing:0.5px; cursor:pointer; user-select:none; }
+.gp-inv input { accent-color:#2a7ab0; cursor:pointer; }
+#gp-status.on { color:#2ae07e; }
+.gain-slider {
+  flex:1; height:4px; appearance:none; -webkit-appearance:none;
+  background:linear-gradient(to right, #2a7ab0 0%, #2a7ab0 var(--pct,35%), #0e1e34 var(--pct,35%));
+  border-radius:3px; cursor:pointer; outline:none;
+}
+.gain-slider::-webkit-slider-thumb {
+  appearance:none; -webkit-appearance:none;
+  width:14px; height:14px; border-radius:50%;
+  background:radial-gradient(circle at 35% 30%, #6abae8, #1a4a82);
+  border:2px solid #3a90d0; box-shadow:0 2px 8px #00000060;
+}
+.gain-slider::-moz-range-thumb {
+  width:12px; height:12px; border-radius:50%;
+  background:radial-gradient(circle at 35% 30%, #6abae8, #1a4a82);
+  border:2px solid #3a90d0; box-shadow:0 2px 8px #00000060;
+}
+
+@keyframes spin-cw  { to { transform:rotate(360deg);  } }
+@keyframes spin-ccw { to { transform:rotate(-360deg); } }
+.blade-grp {
+  transform-box:fill-box; transform-origin:center;
+  animation:spin-cw 8s linear infinite; animation-play-state:paused;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>⚓ Simulador de Manobra Portuária</h1>
+  <p>Marine Telematics — Maneuvering Simulator v2.0</p>
+  <div class="nav"><a href="propulsion_validator.html">← Voltar ao Validador</a></div>
+</header>
+
+<div class="main">
+
+  <!-- ══════════════ SCENE ══════════════ -->
+  <div class="scene-panel">
+    <div class="scene-wrap" id="scene">
+
+      <!-- Cronômetro de manobra -->
+      <div class="chrono" id="chrono">
+        <div class="chrono-lbl">Tempo</div>
+        <div class="chrono-val" id="chrono-val">00:00.0</div>
+      </div>
+
+      <!-- Background: water + pier -->
+      <svg class="scene-bg" viewBox="0 0 900 700" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="gWater" x1="0%" y1="0%" x2="80%" y2="100%">
+            <stop offset="0%" stop-color="#06202e"/>
+            <stop offset="100%" stop-color="#092a3d"/>
+          </linearGradient>
+          <pattern id="pWaves" x="0" y="0" width="70" height="44" patternUnits="userSpaceOnUse">
+            <path d="M 0 22 Q 17.5 15 35 22 Q 52.5 29 70 22" fill="none" stroke="#0d3a50" stroke-width="1" opacity="0.55"/>
+          </pattern>
+          <pattern id="pPlanksH" x="0" y="0" width="120" height="16" patternUnits="userSpaceOnUse">
+            <rect width="120" height="16" fill="#7a6038"/>
+            <rect width="120" height="1.5" y="14.5" fill="#5a4020"/>
+            <line x1="0"   y1="0" x2="0"   y2="16" stroke="#5a4020" stroke-width="0.8"/>
+            <line x1="40"  y1="0" x2="40"  y2="16" stroke="#5a4020" stroke-width="0.5"/>
+            <line x1="80"  y1="0" x2="80"  y2="16" stroke="#5a4020" stroke-width="0.5"/>
+          </pattern>
+          <pattern id="pPlanksV" x="0" y="0" width="16" height="120" patternUnits="userSpaceOnUse">
+            <rect width="16" height="120" fill="#7a6038"/>
+            <rect width="1.5" height="120" x="14.5" fill="#5a4020"/>
+            <line x1="0" y1="0"   x2="16" y2="0"   stroke="#5a4020" stroke-width="0.8"/>
+            <line x1="0" y1="40"  x2="16" y2="40"  stroke="#5a4020" stroke-width="0.5"/>
+            <line x1="0" y1="80"  x2="16" y2="80"  stroke="#5a4020" stroke-width="0.5"/>
+          </pattern>
+        </defs>
+
+        <!-- Grupo mundo — toda a cena transforma aqui; barco fica fixo no centro da tela -->
+        <g id="world-g">
+
+        <!-- Water (infinito: tile grande centrado no barco) -->
+        <rect x="-2000" y="-2000" width="5160" height="4920" fill="url(#gWater)"/>
+        <rect x="-2000" y="-2000" width="5160" height="4920" fill="url(#pWaves)" opacity="0.65"/>
+        <!-- Shallow water tint ao longo das duas marinas (compactas ao norte) -->
+        <rect x="0"   y="30" width="240" height="500" fill="#061520" opacity="0.35" rx="4"/>
+        <rect x="660" y="30" width="240" height="500" fill="#061520" opacity="0.35" rx="4"/>
+
+        <!-- ═══════════════ MARINA OESTE (LEFT) ═══════════════ -->
+        <!-- Main quay: x=6–70, y=40–540 -->
+        <rect x="11" y="45"  width="64" height="500" fill="#000" opacity="0.40" rx="3"/>
+        <rect x="6"  y="40"  width="64" height="500" fill="url(#pPlanksV)" rx="3"/>
+        <rect x="6"  y="40"  width="64" height="4"   fill="#5a4020" rx="2"/>
+        <rect x="6"  y="536" width="64" height="4"   fill="#3e2c10" rx="2"/>
+        <rect x="66" y="40"  width="4"  height="500" fill="#4a3418"/>
+
+        <!-- 4 fingers à leste do quay: x=70–230 (160 wide, mais estreitos), berços = 100 tall -->
+        <g id="fingers-left">
+          <rect x="75" y="65"  width="160" height="28" fill="#000" opacity="0.35" rx="2"/>
+          <rect x="70" y="60"  width="160" height="28" fill="url(#pPlanksH)" rx="2"/>
+          <rect x="70" y="60"  width="160" height="4"  fill="#5a4020"/>
+          <rect x="70" y="84"  width="160" height="4"  fill="#3e2c10"/>
+
+          <rect x="75" y="193" width="160" height="28" fill="#000" opacity="0.35" rx="2"/>
+          <rect x="70" y="188" width="160" height="28" fill="url(#pPlanksH)" rx="2"/>
+          <rect x="70" y="188" width="160" height="4"  fill="#5a4020"/>
+          <rect x="70" y="212" width="160" height="4"  fill="#3e2c10"/>
+
+          <rect x="75" y="321" width="160" height="28" fill="#000" opacity="0.35" rx="2"/>
+          <rect x="70" y="316" width="160" height="28" fill="url(#pPlanksH)" rx="2"/>
+          <rect x="70" y="316" width="160" height="4"  fill="#5a4020"/>
+          <rect x="70" y="340" width="160" height="4"  fill="#3e2c10"/>
+
+          <rect x="75" y="449" width="160" height="28" fill="#000" opacity="0.35" rx="2"/>
+          <rect x="70" y="444" width="160" height="28" fill="url(#pPlanksH)" rx="2"/>
+          <rect x="70" y="444" width="160" height="4"  fill="#5a4020"/>
+          <rect x="70" y="468" width="160" height="4"  fill="#3e2c10"/>
+        </g>
+
+        <!-- Bollards marina esquerda -->
+        <g fill="#3a2810" stroke="#1c1408" stroke-width="1">
+          <circle cx="68" cy="120" r="6"/><circle cx="68" cy="160" r="6"/>
+          <circle cx="68" cy="248" r="6"/><circle cx="68" cy="288" r="6"/>
+          <circle cx="68" cy="376" r="6"/><circle cx="68" cy="416" r="6"/>
+          <circle cx="225" cy="74"  r="5"/><circle cx="225" cy="202" r="5"/>
+          <circle cx="225" cy="330" r="5"/><circle cx="225" cy="458" r="5"/>
+          <circle cx="150" cy="58"  r="4.5"/><circle cx="195" cy="58"  r="4.5"/>
+          <circle cx="150" cy="90"  r="4.5"/><circle cx="195" cy="90"  r="4.5"/>
+          <circle cx="150" cy="186" r="4.5"/><circle cx="195" cy="186" r="4.5"/>
+          <circle cx="150" cy="218" r="4.5"/><circle cx="195" cy="218" r="4.5"/>
+          <circle cx="150" cy="314" r="4.5"/><circle cx="195" cy="314" r="4.5"/>
+          <circle cx="150" cy="346" r="4.5"/><circle cx="195" cy="346" r="4.5"/>
+          <circle cx="150" cy="442" r="4.5"/><circle cx="195" cy="442" r="4.5"/>
+        </g>
+        <g fill="#6a5030">
+          <circle cx="68" cy="119" r="3.5"/><circle cx="68" cy="159" r="3.5"/>
+          <circle cx="68" cy="247" r="3.5"/><circle cx="68" cy="287" r="3.5"/>
+          <circle cx="68" cy="375" r="3.5"/><circle cx="68" cy="415" r="3.5"/>
+          <circle cx="225" cy="73"  r="2.8"/><circle cx="225" cy="201" r="2.8"/>
+          <circle cx="225" cy="329" r="2.8"/><circle cx="225" cy="457" r="2.8"/>
+        </g>
+
+        <text x="38" y="290" text-anchor="middle" font-size="10" font-family="monospace"
+              fill="#4a3010" letter-spacing="5" opacity="0.5"
+              transform="rotate(-90 38 290)">MARINA OESTE</text>
+
+        <!-- Barco aportado berço L1 (center 150,138) — sportboat branco, proa leste -->
+        <g transform="translate(150,138)">
+          <ellipse cx="4" cy="6" rx="82" ry="20" fill="#000" opacity="0.35"/>
+          <path d="M -80 -17 Q -85 0 -80 17 L 66 15 Q 82 7 84 0 Q 82 -7 66 -15 Z"
+                fill="#e8ecef" stroke="#9ca8b0" stroke-width="0.8"/>
+          <rect x="-50" y="-10" width="56" height="20" fill="#6b4a22" rx="2"/>
+          <rect x="-50" y="-10" width="56" height="20" fill="url(#pPlanksH)" opacity="0.35" rx="2"/>
+          <path d="M 8 -12 L 40 -7 L 40 7 L 8 12 Z" fill="#1a2838" opacity="0.85"/>
+          <path d="M 10 -10 L 38 -6 L 38 6 L 10 10 Z" fill="#3a6a94" opacity="0.6"/>
+          <rect x="-4" y="-9" width="24" height="18" fill="#c8ced4" rx="1.5"/>
+          <line x1="10" y1="-1" x2="10" y2="-24" stroke="#1a2838" stroke-width="1"/>
+          <circle cx="10" cy="-24" r="1.3" fill="#ff4040"/>
+          <path d="M -78 -14 Q -95 -30 -102 -48" fill="none" stroke="#d4c09a" stroke-width="1.1" opacity="0.7"/>
+          <path d="M  80  -8 Q 98 -22 108 -38"  fill="none" stroke="#d4c09a" stroke-width="1.1" opacity="0.7"/>
+          <path d="M -78  14 Q -95  38 -102  58" fill="none" stroke="#d4c09a" stroke-width="1.1" opacity="0.7"/>
+          <path d="M  80   8 Q 98  26 106  52"  fill="none" stroke="#d4c09a" stroke-width="1.1" opacity="0.7"/>
+        </g>
+
+        <!-- Barco aportado berço L2 (center 150,266) — cruiser vermelho/branco -->
+        <g transform="translate(150,266)">
+          <ellipse cx="4" cy="6" rx="86" ry="22" fill="#000" opacity="0.35"/>
+          <path d="M -84 -18 Q -90 0 -84 18 L 70 16 Q 86 8 88 0 Q 86 -8 70 -16 Z"
+                fill="#b8231a" stroke="#5a1008" stroke-width="0.8"/>
+          <path d="M -84 -18 Q -90 -15 -84 -12 L 70 -12 L 88 -2 L 88 2 L 70 12 L -84 12 Q -90 15 -84 18 Z"
+                fill="#e8ecef" opacity="0.55"/>
+          <rect x="-60" y="-12" width="68" height="24" fill="#6b4a22" rx="2"/>
+          <rect x="-60" y="-12" width="68" height="24" fill="url(#pPlanksH)" opacity="0.35" rx="2"/>
+          <path d="M -10 -14 L 26 -10 L 28 10 L -10 14 Z" fill="#d8dce0" stroke="#8a9098" stroke-width="0.6"/>
+          <path d="M -6 -11 L 22 -8 L 24 8 L -6 11 Z" fill="#2a4866" opacity="0.9"/>
+          <line x1="4" y1="-12" x2="4" y2="-30" stroke="#1a2838" stroke-width="1.1"/>
+          <circle cx="4" cy="-30" r="1.3" fill="#ff4040"/>
+          <path d="M -82 -14 Q -98 -28 -108 -40" fill="none" stroke="#d4c09a" stroke-width="1.1" opacity="0.7"/>
+          <path d="M  84  -8 Q 102 -22 112 -30"  fill="none" stroke="#d4c09a" stroke-width="1.1" opacity="0.7"/>
+          <path d="M -82  14 Q -98  30 -108  44" fill="none" stroke="#d4c09a" stroke-width="1.1" opacity="0.7"/>
+          <path d="M  84   8 Q 102  24 112  36"  fill="none" stroke="#d4c09a" stroke-width="1.1" opacity="0.7"/>
+        </g>
+
+        <!-- Barco aportado berço L3 (center 150,394) — yacht azul com flybridge -->
+        <g transform="translate(150,394)">
+          <ellipse cx="4" cy="6" rx="88" ry="24" fill="#000" opacity="0.38"/>
+          <path d="M -85 -19 Q -92 0 -85 19 L 72 17 Q 90 9 92 0 Q 90 -9 72 -17 Z"
+                fill="#18344e" stroke="#0a1a2c" stroke-width="1"/>
+          <path d="M -85 -19 Q -92 -16 -85 -14 L 72 -14 Q 90 -12 91 -10 L 91 -6 Q 90 -10 72 -12 L -85 -12 Z"
+                fill="#e8ecef" opacity="0.6"/>
+          <rect x="-66" y="-13" width="80" height="26" fill="#6b4a22" rx="2"/>
+          <rect x="-66" y="-13" width="80" height="26" fill="url(#pPlanksH)" opacity="0.35" rx="2"/>
+          <path d="M -26 -15 L 18 -13 L 22 13 L -24 15 Z" fill="#d8dce0" stroke="#8a9098" stroke-width="0.6"/>
+          <path d="M -22 -12 L 16 -10 L 18 10 L -20 12 Z" fill="#2a4866" opacity="0.9"/>
+          <path d="M -16 -11 Q -10 -20 -4 -20 Q 2 -20 8 -11" fill="none" stroke="#9ca8b0" stroke-width="1.3"/>
+          <rect x="-2" y="-24" width="14" height="4" fill="#1a2838" rx="1"/>
+          <path d="M 72 -4 L 90 -2 L 90 2 L 72 4" fill="none" stroke="#c8d0d8" stroke-width="1.1"/>
+          <line x1="0" y1="-13" x2="0" y2="-40" stroke="#1a2838" stroke-width="1.2"/>
+          <line x1="-7" y1="-33" x2="7" y2="-33" stroke="#1a2838" stroke-width="0.7"/>
+          <circle cx="0" cy="-40" r="1.4" fill="#ff4040"/>
+          <path d="M -82 -16 Q -104 -34 -116 -50" fill="none" stroke="#d4c09a" stroke-width="1.1" opacity="0.7"/>
+          <path d="M  84  -10 Q 104 -24 116 -36"  fill="none" stroke="#d4c09a" stroke-width="1.1" opacity="0.7"/>
+          <path d="M -82  16 Q -104  36 -116  54" fill="none" stroke="#d4c09a" stroke-width="1.1" opacity="0.7"/>
+          <path d="M  84  10 Q 104  28 116  46"  fill="none" stroke="#d4c09a" stroke-width="1.1" opacity="0.7"/>
+        </g>
+
+        <!-- ═══════════════ MARINA LESTE (RIGHT) — ALVO ═══════════════ -->
+        <!-- Main quay: x=830–894, y=40–540 -->
+        <rect x="835" y="45"  width="64" height="500" fill="#000" opacity="0.40" rx="3"/>
+        <rect x="830" y="40"  width="64" height="500" fill="url(#pPlanksV)" rx="3"/>
+        <rect x="830" y="40"  width="64" height="4"   fill="#5a4020" rx="2"/>
+        <rect x="830" y="536" width="64" height="4"   fill="#3e2c10" rx="2"/>
+        <rect x="830" y="40"  width="4"  height="500" fill="#4a3418"/>
+
+        <!-- 4 fingers à oeste do quay direito: x=670–830 (160 wide, mais estreitos) -->
+        <g id="fingers-right">
+          <rect x="675" y="65"  width="160" height="28" fill="#000" opacity="0.35" rx="2"/>
+          <rect x="670" y="60"  width="160" height="28" fill="url(#pPlanksH)" rx="2"/>
+          <rect x="670" y="60"  width="160" height="4"  fill="#5a4020"/>
+          <rect x="670" y="84"  width="160" height="4"  fill="#3e2c10"/>
+
+          <rect x="675" y="193" width="160" height="28" fill="#000" opacity="0.35" rx="2"/>
+          <rect x="670" y="188" width="160" height="28" fill="url(#pPlanksH)" rx="2"/>
+          <rect x="670" y="188" width="160" height="4"  fill="#5a4020"/>
+          <rect x="670" y="212" width="160" height="4"  fill="#3e2c10"/>
+
+          <rect x="675" y="321" width="160" height="28" fill="#000" opacity="0.35" rx="2"/>
+          <rect x="670" y="316" width="160" height="28" fill="url(#pPlanksH)" rx="2"/>
+          <rect x="670" y="316" width="160" height="4"  fill="#5a4020"/>
+          <rect x="670" y="340" width="160" height="4"  fill="#3e2c10"/>
+
+          <rect x="675" y="449" width="160" height="28" fill="#000" opacity="0.35" rx="2"/>
+          <rect x="670" y="444" width="160" height="28" fill="url(#pPlanksH)" rx="2"/>
+          <rect x="670" y="444" width="160" height="4"  fill="#5a4020"/>
+          <rect x="670" y="468" width="160" height="4"  fill="#3e2c10"/>
+        </g>
+
+        <!-- Bollards marina direita -->
+        <g fill="#3a2810" stroke="#1c1408" stroke-width="1">
+          <circle cx="832" cy="120" r="6"/><circle cx="832" cy="160" r="6"/>
+          <circle cx="832" cy="248" r="6"/><circle cx="832" cy="288" r="6"/>
+          <circle cx="832" cy="376" r="6"/><circle cx="832" cy="416" r="6"/>
+          <circle cx="675" cy="74"  r="5"/><circle cx="675" cy="202" r="5"/>
+          <circle cx="675" cy="330" r="5"/><circle cx="675" cy="458" r="5"/>
+          <circle cx="705" cy="58"  r="4.5"/><circle cx="750" cy="58"  r="4.5"/>
+          <circle cx="705" cy="90"  r="4.5"/><circle cx="750" cy="90"  r="4.5"/>
+          <circle cx="705" cy="186" r="4.5"/><circle cx="750" cy="186" r="4.5"/>
+          <circle cx="705" cy="218" r="4.5"/><circle cx="750" cy="218" r="4.5"/>
+          <circle cx="705" cy="314" r="4.5"/><circle cx="750" cy="314" r="4.5"/>
+          <circle cx="705" cy="346" r="4.5"/><circle cx="750" cy="346" r="4.5"/>
+          <circle cx="705" cy="442" r="4.5"/><circle cx="750" cy="442" r="4.5"/>
+        </g>
+        <g fill="#6a5030">
+          <circle cx="832" cy="119" r="3.5"/><circle cx="832" cy="159" r="3.5"/>
+          <circle cx="832" cy="247" r="3.5"/><circle cx="832" cy="287" r="3.5"/>
+          <circle cx="832" cy="375" r="3.5"/><circle cx="832" cy="415" r="3.5"/>
+          <circle cx="675" cy="73"  r="2.8"/><circle cx="675" cy="201" r="2.8"/>
+          <circle cx="675" cy="329" r="2.8"/><circle cx="675" cy="457" r="2.8"/>
+        </g>
+
+        <text x="862" y="290" text-anchor="middle" font-size="10" font-family="monospace"
+              fill="#4a3010" letter-spacing="5" opacity="0.5"
+              transform="rotate(90 862 290)">MARINA LESTE</text>
+
+        <!-- Barco aportado berço R1 (center 750,138) — center console, proa oeste -->
+        <g transform="translate(750,138) scale(-1,1)">
+          <ellipse cx="4" cy="6" rx="80" ry="20" fill="#000" opacity="0.35"/>
+          <path d="M -78 -17 Q -84 0 -78 17 L 64 15 Q 80 7 82 0 Q 80 -7 64 -15 Z"
+                fill="#f2f4f6" stroke="#9ca8b0" stroke-width="0.8"/>
+          <rect x="-48" y="-10" width="56" height="20" fill="#6b4a22" rx="2"/>
+          <rect x="-48" y="-10" width="56" height="20" fill="url(#pPlanksH)" opacity="0.35" rx="2"/>
+          <!-- T-top central -->
+          <rect x="-10" y="-11" width="24" height="22" fill="#d8dce0" rx="1.5"/>
+          <rect x="-10" y="-11" width="24" height="2" fill="#8a9098"/>
+          <circle cx="2" cy="0" r="2.5" fill="#1a2838"/>
+          <!-- suportes das varas -->
+          <line x1="-8" y1="-10" x2="-14" y2="-28" stroke="#1a2838" stroke-width="0.6"/>
+          <line x1="-4" y1="-10" x2="-10" y2="-30" stroke="#1a2838" stroke-width="0.6"/>
+          <line x1="8"  y1="-10" x2="14"  y2="-28" stroke="#1a2838" stroke-width="0.6"/>
+          <line x1="12" y1="-10" x2="18"  y2="-30" stroke="#1a2838" stroke-width="0.6"/>
+          <line x1="6" y1="-1" x2="6" y2="-22" stroke="#1a2838" stroke-width="1"/>
+          <circle cx="6" cy="-22" r="1.3" fill="#ff4040"/>
+          <!-- outboard traseiro -->
+          <rect x="-80" y="-5" width="6" height="10" fill="#1a2838" rx="1"/>
+          <path d="M -76 -14 Q -98 -28 -106 -42" fill="none" stroke="#d4c09a" stroke-width="1.1" opacity="0.7"/>
+          <path d="M  78  -8 Q 94 -22 104 -34"  fill="none" stroke="#d4c09a" stroke-width="1.1" opacity="0.7"/>
+          <path d="M -76  14 Q -98  30 -106  48" fill="none" stroke="#d4c09a" stroke-width="1.1" opacity="0.7"/>
+          <path d="M  78   8 Q 94  24 104  40"  fill="none" stroke="#d4c09a" stroke-width="1.1" opacity="0.7"/>
+        </g>
+
+        <!-- Barco aportado berço R3 (center 750,394) — cruiser branco, proa oeste -->
+        <g transform="translate(750,394) scale(-1,1)">
+          <ellipse cx="4" cy="6" rx="88" ry="24" fill="#000" opacity="0.38"/>
+          <path d="M -85 -19 Q -92 0 -85 19 L 72 17 Q 90 9 92 0 Q 90 -9 72 -17 Z"
+                fill="#f0f3f6" stroke="#8a9098" stroke-width="1"/>
+          <path d="M -85 -19 L 92 -17 L 92 -13 L -85 -14 Z" fill="#1a4a6a" opacity="0.5"/>
+          <rect x="-66" y="-13" width="80" height="26" fill="#6b4a22" rx="2"/>
+          <rect x="-66" y="-13" width="80" height="26" fill="url(#pPlanksH)" opacity="0.35" rx="2"/>
+          <path d="M -28 -15 L 16 -13 L 20 13 L -26 15 Z" fill="#c8d0d8" stroke="#8a9098" stroke-width="0.6"/>
+          <path d="M -24 -12 L 14 -10 L 16 10 L -22 12 Z" fill="#3a6a94" opacity="0.85"/>
+          <rect x="-2" y="-22" width="12" height="4" fill="#1a2838" rx="1"/>
+          <line x1="0" y1="-13" x2="0" y2="-36" stroke="#1a2838" stroke-width="1.1"/>
+          <circle cx="0" cy="-36" r="1.3" fill="#ff4040"/>
+          <path d="M 72 -4 L 88 -2 L 88 2 L 72 4" fill="none" stroke="#9ca8b0" stroke-width="1"/>
+          <path d="M -82 -16 Q -104 -34 -118 -48" fill="none" stroke="#d4c09a" stroke-width="1.1" opacity="0.7"/>
+          <path d="M  84  -10 Q 104 -24 118 -36"  fill="none" stroke="#d4c09a" stroke-width="1.1" opacity="0.7"/>
+          <path d="M -82  16 Q -104  36 -118  54" fill="none" stroke="#d4c09a" stroke-width="1.1" opacity="0.7"/>
+          <path d="M  84  10 Q 104  28 118  46"  fill="none" stroke="#d4c09a" stroke-width="1.1" opacity="0.7"/>
+        </g>
+
+        <!-- ═══ ALVO — marina leste, berço 2 (vaga vazia, estreita) ═══ -->
+        <g id="target-berth" opacity="0.8">
+          <rect x="675" y="218" width="155" height="96"
+                fill="none" stroke="#2ae07e" stroke-width="2"
+                stroke-dasharray="8 6" rx="3"/>
+          <text x="752" y="268" text-anchor="middle" font-size="12" font-family="monospace"
+                fill="#2ae07e" letter-spacing="3" opacity="0.9">VAGA</text>
+          <text x="752" y="282" text-anchor="middle" font-size="7" font-family="monospace"
+                fill="#2ae07e" letter-spacing="2" opacity="0.7">DOCK HERE</text>
+          <path d="M 820 266 L 835 266 M 828 261 L 835 266 L 828 271"
+                fill="none" stroke="#2ae07e" stroke-width="1.5" opacity="0.7"/>
+        </g>
+
+        <!-- Ondulação / entrada dos canais -->
+        <g opacity="0.3" stroke="#1a4a66" fill="none" stroke-width="0.8">
+          <path d="M 250 138 Q 280 133 310 138"/>
+          <path d="M 250 266 Q 280 261 310 266"/>
+          <path d="M 250 394 Q 280 389 310 394"/>
+          <path d="M 590 138 Q 620 133 650 138"/>
+          <path d="M 590 266 Q 620 261 650 266"/>
+          <path d="M 590 394 Q 620 389 650 394"/>
+        </g>
+
+        <!-- Boias de canal marcando a entrada sul -->
+        <g>
+          <circle cx="360" cy="590" r="7" fill="#b22020" stroke="#5a0a0a" stroke-width="1"/>
+          <circle cx="360" cy="588" r="2" fill="#ff8080"/>
+          <circle cx="540" cy="590" r="7" fill="#2a8a40" stroke="#0a3a18" stroke-width="1"/>
+          <circle cx="540" cy="588" r="2" fill="#80ffa0"/>
+        </g>
+
+        </g><!-- /world-g -->
+
+      </svg>
+
+      <!-- Overlay fixo: rosa dos ventos + barra de escala sempre alinhadas à tela -->
+      <svg class="scene-overlay" viewBox="0 0 900 700" style="pointer-events:none">
+        <!-- Compass rose (fixo no canto — não gira com o mundo) -->
+        <g transform="translate(46,46)" opacity="0.75">
+          <circle r="24" fill="#071828" stroke="#1a3a52" stroke-width="1.2"/>
+          <line x1="0" y1="-20" x2="0" y2="-14" stroke="#3a7090" stroke-width="2.5"/>
+          <line x1="0"  y1="14" x2="0"  y2="20" stroke="#3a7090" stroke-width="1.5"/>
+          <line x1="-20" y1="0" x2="-14" y2="0" stroke="#3a7090" stroke-width="1.5"/>
+          <line x1="14"  y1="0" x2="20"  y2="0" stroke="#3a7090" stroke-width="1.5"/>
+          <polygon points="0,-14 -4.5,0 0,-5 4.5,0" fill="#d8f0ff"/>
+          <polygon points="0,14 -3.5,2 0,6 3.5,2" fill="#2a5070"/>
+          <!-- Agulha que aponta o norte real (rotaciona junto com o rumo do barco) -->
+          <g id="compass-needle">
+            <polygon points="0,-14 -4.5,0 0,-5 4.5,0" fill="#d8f0ff"/>
+            <polygon points="0,14 -3.5,2 0,6 3.5,2" fill="#2a5070"/>
+          </g>
+          <text x="0"  y="-22" text-anchor="middle" font-size="8" fill="#4a8ab0" font-family="monospace" font-weight="bold">N</text>
+          <text x="0"  y="29"  text-anchor="middle" font-size="6.5" fill="#2a5070" font-family="monospace">S</text>
+          <text x="-26" y="3"  text-anchor="middle" font-size="6.5" fill="#2a5070" font-family="monospace">W</text>
+          <text x="26"  y="3"  text-anchor="middle" font-size="6.5" fill="#2a5070" font-family="monospace">E</text>
+        </g>
+        <!-- Indicador de vento + correnteza (fixo, topo direito) -->
+        <g id="env-indicator" transform="translate(850,46)" opacity="0.9">
+          <circle r="32" fill="#071828" stroke="#1a3a52" stroke-width="1.2"/>
+          <text x="0" y="-38" text-anchor="middle" font-size="7" fill="#4a8ab0"
+                font-family="monospace" letter-spacing="1.5">VENTO · CORRENTE</text>
+          <!-- Vento (seta azul clara — aponta para onde sopra) -->
+          <g id="env-wind-arrow" transform="rotate(0)" opacity="0">
+            <line x1="0" y1="0" x2="0" y2="22" stroke="#8ad4f8" stroke-width="2.2" stroke-linecap="round"/>
+            <polygon points="0,28 -4,20 4,20" fill="#8ad4f8"/>
+            <text x="8" y="14" font-size="6" fill="#8ad4f8" font-family="monospace">V</text>
+          </g>
+          <!-- Correnteza (seta verde — aponta para onde flui) -->
+          <g id="env-cur-arrow" transform="rotate(0)" opacity="0">
+            <line x1="0" y1="0" x2="0" y2="22" stroke="#4ad090" stroke-width="2.2" stroke-linecap="round"/>
+            <polygon points="0,28 -4,20 4,20" fill="#4ad090"/>
+            <text x="8" y="14" font-size="6" fill="#4ad090" font-family="monospace">C</text>
+          </g>
+        </g>
+
+        <!-- Scale bar (fixa) -->
+        <g transform="translate(20,680)" opacity="0.45">
+          <line x1="0" y1="0" x2="58" y2="0" stroke="#2a5070" stroke-width="1.5"/>
+          <line x1="0"  y1="-5" x2="0"  y2="5" stroke="#2a5070" stroke-width="1.5"/>
+          <line x1="58" y1="-5" x2="58" y2="5" stroke="#2a5070" stroke-width="1.5"/>
+          <text x="29" y="-7" text-anchor="middle" font-size="7" fill="#2a5070" font-family="monospace">5 m</text>
+        </g>
+      </svg>
+
+      <!-- Overlay SVG: heading line + wake -->
+      <svg class="scene-overlay" id="overlay-svg" viewBox="0 0 900 700">
+        <!-- Wake trail -->
+        <polyline id="wake-poly" fill="none" stroke="#1a5070" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round" opacity="0" points=""/>
+        <!-- Heading indicator line -->
+        <line id="hdg-line" x1="0" y1="0" x2="0" y2="0"
+              stroke="#2a70a0" stroke-width="1.5" stroke-dasharray="7,5" opacity="0.65"/>
+      </svg>
+
+      <!-- ══ BOAT ══ -->
+      <div class="boat-wrap" id="boat-wrap">
+        <svg class="vessel-svg active" data-vessel="iate-twin" viewBox="0 0 260 900" width="52" height="180" style="overflow:visible">
+          <defs>
+            <linearGradient id="gIateHull" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%"   stop-color="#6a7888"/>
+              <stop offset="8%"   stop-color="#b8c4d0"/>
+              <stop offset="50%"  stop-color="#f4f6f8"/>
+              <stop offset="92%"  stop-color="#aab8c4"/>
+              <stop offset="100%" stop-color="#6a7888"/>
+            </linearGradient>
+            <linearGradient id="gIateCabin" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%"   stop-color="#f8fafc"/>
+              <stop offset="100%" stop-color="#a8b4c0"/>
+            </linearGradient>
+            <linearGradient id="gIateGlass" x1="0%" y1="0%" x2="30%" y2="100%">
+              <stop offset="0%"   stop-color="#8ed0ea" stop-opacity="0.85"/>
+              <stop offset="50%"  stop-color="#2a5878"/>
+              <stop offset="100%" stop-color="#0a1828"/>
+            </linearGradient>
+            <pattern id="pIateTeak" x="0" y="0" width="60" height="10" patternUnits="userSpaceOnUse">
+              <rect width="60" height="10" fill="#b48050"/>
+              <rect width="60" height="1.2" y="8.8" fill="#6a4418"/>
+            </pattern>
+            <radialGradient id="gIateSunpad" cx="50%" cy="35%" r="65%">
+              <stop offset="0%"   stop-color="#ffffff"/>
+              <stop offset="100%" stop-color="#c4d0dc"/>
+            </radialGradient>
+            <linearGradient id="gIateMotor" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%"   stop-color="#3a4c5e"/>
+              <stop offset="100%" stop-color="#14202e"/>
+            </linearGradient>
+            <filter id="fIateShadow" x="-15%" y="-3%" width="130%" height="112%">
+              <feDropShadow dx="4" dy="14" stdDeviation="12" flood-color="#000" flood-opacity="0.55"/>
+            </filter>
+            <filter id="fIateGlow" x="-60%" y="-60%" width="220%" height="220%">
+              <feGaussianBlur stdDeviation="4" result="b"/>
+              <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+          </defs>
+
+          <!-- Sombra na água -->
+          <ellipse cx="135" cy="470" rx="125" ry="420" fill="#000" opacity="0.35" filter="url(#fIateShadow)"/>
+
+          <!-- Casco: proa pontuda, mid cheio, leve tumble home a ré -->
+          <path d="M 130,18 C 80,30 28,100 20,220 L 14,650 C 14,740 30,800 60,830 L 200,830 C 230,800 246,740 246,650 L 240,220 C 232,100 180,30 130,18 Z"
+                fill="url(#gIateHull)" stroke="#0e1a2a" stroke-width="3"/>
+          <!-- Faixa azul da linha d'água -->
+          <path d="M 22,440 L 18,650 C 18,720 28,770 48,800"
+                fill="none" stroke="#1e5080" stroke-width="5" opacity="0.75"/>
+          <path d="M 238,440 L 242,650 C 242,720 232,770 212,800"
+                fill="none" stroke="#1e5080" stroke-width="5" opacity="0.75"/>
+          <!-- Reflexo branco superior no casco -->
+          <path d="M 130,32 C 92,44 50,105 38,220 L 34,440"
+                fill="none" stroke="#ffffff" stroke-width="2" opacity="0.55"/>
+          <path d="M 130,32 C 168,44 210,105 222,220 L 226,440"
+                fill="none" stroke="#ffffff" stroke-width="1.6" opacity="0.38"/>
+
+          <!-- Bow pulpit/roleta -->
+          <rect x="120" y="36" width="20" height="32" rx="3" fill="#d4dce4" stroke="#7a8894" stroke-width="0.8"/>
+          <ellipse cx="130" cy="58" rx="6" ry="4" fill="#2a3240" stroke="#14202c" stroke-width="0.8"/>
+          <circle cx="130" cy="58" r="2.3" fill="#6a7888"/>
+          <!-- Bow pulpit rails -->
+          <path d="M 106,88 C 115,70 125,62 130,62 C 135,62 145,70 154,88"
+                fill="none" stroke="#d0d8e0" stroke-width="1.4"/>
+
+          <!-- Bow sunpad -->
+          <ellipse cx="130" cy="168" rx="52" ry="78" fill="url(#gIateSunpad)" stroke="#8a96a4" stroke-width="1"/>
+          <line x1="130" y1="100" x2="130" y2="240" stroke="#b0bcc8" stroke-width="0.8"/>
+          <ellipse cx="130" cy="168" rx="48" ry="74" fill="none" stroke="#ffffff" stroke-width="1" opacity="0.45"/>
+
+          <!-- Bow thruster tunnel -->
+          <rect x="44" y="262" width="172" height="18" rx="9" fill="#0a1828" stroke="#182e46" stroke-width="1"/>
+          <rect x="48" y="264" width="164" height="5" fill="#1a2e46" opacity="0.7"/>
+          <g id="bow-arr-left-iate"  opacity="0" filter="url(#fIateGlow)"><polygon points="28,271 46,261 46,281" fill="#00ee88"/></g>
+          <g id="bow-arr-right-iate" opacity="0" filter="url(#fIateGlow)"><polygon points="232,271 214,261 214,281" fill="#00ee88"/></g>
+          <g transform="translate(130,271)">
+            <g id="bow-prop-iate" class="blade-grp">
+              <ellipse cx="-14" cy="0" rx="18" ry="7" fill="#4a6a88" opacity="0.92"/>
+              <ellipse cx="14"  cy="0" rx="18" ry="7" fill="#4a6a88" opacity="0.92"/>
+              <circle r="5" fill="#28486a"/>
+              <circle r="2.2" fill="#5a82a8"/>
+            </g>
+          </g>
+
+          <!-- Luzes de navegação -->
+          <circle cx="32"  cy="300" r="5" fill="#cc1818" filter="url(#fIateGlow)"/>
+          <circle cx="32"  cy="300" r="5" fill="none" stroke="#6a0000" stroke-width="1"/>
+          <circle cx="228" cy="300" r="5" fill="#0cb040" filter="url(#fIateGlow)"/>
+          <circle cx="228" cy="300" r="5" fill="none" stroke="#006020" stroke-width="1"/>
+
+          <!-- Cabine principal -->
+          <rect x="52" y="318" width="156" height="280" rx="26" fill="url(#gIateCabin)" stroke="#7a8896" stroke-width="1.5"/>
+          <!-- windshield wraparound -->
+          <path d="M 58,330 C 72,310 98,300 130,300 C 162,300 188,310 202,330 L 202,370 L 58,370 Z"
+                fill="url(#gIateGlass)"/>
+          <path d="M 66,336 C 84,320 108,314 130,314" fill="none" stroke="#c8e8f4" stroke-width="1.3" opacity="0.7"/>
+          <line x1="130" y1="300" x2="130" y2="370" stroke="#6890a8" stroke-width="1.2"/>
+          <!-- Janelas laterais -->
+          <rect x="56" y="384" width="14" height="140" rx="4" fill="url(#gIateGlass)" stroke="#3a6888" stroke-width="0.8"/>
+          <rect x="58" y="386" width="8"  height="56"  rx="3" fill="#bce0ec" opacity="0.5"/>
+          <rect x="190" y="384" width="14" height="140" rx="4" fill="url(#gIateGlass)" stroke="#3a6888" stroke-width="0.8"/>
+          <rect x="192" y="386" width="8"  height="56"  rx="3" fill="#bce0ec" opacity="0.5"/>
+
+          <!-- Flybridge central -->
+          <rect x="80" y="390" width="100" height="130" rx="16" fill="#dce4ec" stroke="#8090a0" stroke-width="1.2"/>
+          <rect x="86" y="398" width="88" height="40"  rx="6" fill="url(#gIateGlass)" opacity="0.92"/>
+          <rect x="90" y="400" width="42" height="18"  rx="3" fill="#c0e4f0" opacity="0.5"/>
+          <!-- Console + volante -->
+          <rect x="96" y="452" width="68" height="18" rx="4" fill="#2a3644" stroke="#14202c" stroke-width="0.8"/>
+          <circle cx="130" cy="488" r="10" fill="#3a4a5c" stroke="#14202c" stroke-width="1"/>
+          <circle cx="130" cy="488" r="5"  fill="#1e2834"/>
+          <line x1="120" y1="488" x2="140" y2="488" stroke="#6a7888" stroke-width="0.8"/>
+          <line x1="130" y1="478" x2="130" y2="498" stroke="#6a7888" stroke-width="0.8"/>
+
+          <!-- Radar arch -->
+          <path d="M 62,538 C 130,524 130,524 198,538" fill="none" stroke="#90a0b0" stroke-width="3"/>
+          <rect x="116" y="528" width="28" height="10" rx="3" fill="#4a5868"/>
+          <ellipse cx="130" cy="540" rx="14" ry="5" fill="#b8c4d0" stroke="#6a7888" stroke-width="0.8"/>
+          <circle cx="130" cy="540" r="2.5" fill="#4a5868"/>
+          <!-- Antena -->
+          <line x1="130" y1="530" x2="130" y2="470" stroke="#2a3644" stroke-width="1.4"/>
+          <circle cx="130" cy="470" r="2.5" fill="#cc3030"/>
+
+          <!-- Cockpit aft (teca) -->
+          <path d="M 54,600 L 206,600 L 206,770 C 206,790 176,802 130,804 C 84,802 54,790 54,770 Z"
+                fill="url(#pIateTeak)" stroke="#4a2e10" stroke-width="1"/>
+          <!-- Mesa de cockpit -->
+          <rect x="100" y="650" width="60" height="44" rx="6" fill="#8a6030" stroke="#4a2e10" stroke-width="0.8"/>
+          <rect x="106" y="656" width="48" height="32" rx="4" fill="#a87c48"/>
+          <!-- Banco em U -->
+          <path d="M 62,614 L 62,690 M 198,614 L 198,690 M 62,700 L 198,700"
+                fill="none" stroke="#e8e0c0" stroke-width="5" stroke-linecap="round" opacity="0.85"/>
+
+          <!-- Cleats -->
+          <rect x="16" y="270" width="10" height="6" rx="1.5" fill="#c0c8d0" stroke="#7a8894" stroke-width="0.3"/>
+          <rect x="234" y="270" width="10" height="6" rx="1.5" fill="#c0c8d0" stroke="#7a8894" stroke-width="0.3"/>
+          <rect x="14" y="550" width="10" height="6" rx="1.5" fill="#c0c8d0" stroke="#7a8894" stroke-width="0.3"/>
+          <rect x="236" y="550" width="10" height="6" rx="1.5" fill="#c0c8d0" stroke="#7a8894" stroke-width="0.3"/>
+          <rect x="18" y="760" width="10" height="6" rx="1.5" fill="#c0c8d0" stroke="#7a8894" stroke-width="0.3"/>
+          <rect x="232" y="760" width="10" height="6" rx="1.5" fill="#c0c8d0" stroke="#7a8894" stroke-width="0.3"/>
+
+          <!-- Faixa azul decorativa lateral -->
+          <rect x="20" y="660" width="8" height="100" fill="#1e5080" opacity="0.85"/>
+          <rect x="232" y="660" width="8" height="100" fill="#1e5080" opacity="0.85"/>
+
+          <!-- Plataforma de popa -->
+          <path d="M 40,818 L 220,818 L 218,858 C 218,870 180,878 130,878 C 80,878 42,870 42,858 Z"
+                fill="#c8d2dc" stroke="#8a96a4" stroke-width="1"/>
+          <line x1="70" y1="830" x2="190" y2="830" stroke="#8a96a4" stroke-width="0.8" opacity="0.6"/>
+          <line x1="70" y1="846" x2="190" y2="846" stroke="#8a96a4" stroke-width="0.8" opacity="0.6"/>
+
+          <!-- Stern thruster tunnel -->
+          <rect x="58" y="798" width="144" height="16" rx="8" fill="#0a1828" stroke="#182e46" stroke-width="1"/>
+          <rect x="62" y="800" width="136" height="5" fill="#1a2e46" opacity="0.7"/>
+          <g id="stern-arr-left-iate"  opacity="0" filter="url(#fIateGlow)"><polygon points="44,806 60,797 60,815" fill="#00ee88"/></g>
+          <g id="stern-arr-right-iate" opacity="0" filter="url(#fIateGlow)"><polygon points="216,806 200,797 200,815" fill="#00ee88"/></g>
+          <g transform="translate(130,806)">
+            <g id="stern-prop-iate" class="blade-grp">
+              <ellipse cx="-12" cy="0" rx="15" ry="6" fill="#4a6a88" opacity="0.92"/>
+              <ellipse cx="12"  cy="0" rx="15" ry="6" fill="#4a6a88" opacity="0.92"/>
+              <circle r="4.5" fill="#28486a"/>
+              <circle r="2" fill="#5a82a8"/>
+            </g>
+          </g>
+
+          <!-- Motores sterndrive (BB + BE) sob o espelho -->
+          <rect x="74" y="820" width="28" height="52" rx="6" fill="url(#gIateMotor)" stroke="#050c16" stroke-width="1"/>
+          <line x1="78" y1="830" x2="98" y2="830" stroke="#2a3a4c" stroke-width="0.8"/>
+          <line x1="78" y1="838" x2="98" y2="838" stroke="#2a3a4c" stroke-width="0.8"/>
+          <line x1="78" y1="846" x2="98" y2="846" stroke="#2a3a4c" stroke-width="0.8"/>
+          <line x1="78" y1="854" x2="98" y2="854" stroke="#2a3a4c" stroke-width="0.8"/>
+          <g id="port-arr-fwd-iate" opacity="0" filter="url(#fIateGlow)"><polygon points="88,810 80,830 96,830" fill="#00ee88"/></g>
+          <g id="port-arr-aft-iate" opacity="0" filter="url(#fIateGlow)"><polygon points="88,892 80,874 96,874" fill="#ff3a3a"/></g>
+          <g transform="translate(88,874)">
+            <g id="port-prop-iate" class="blade-grp">
+              <ellipse cx="0" cy="-10" rx="6.5" ry="13" fill="#3a5878"/>
+              <ellipse cx="0" cy="-10" rx="6.5" ry="13" fill="#3a5878" transform="rotate(120)"/>
+              <ellipse cx="0" cy="-10" rx="6.5" ry="13" fill="#3a5878" transform="rotate(240)"/>
+              <circle r="4.5" fill="#28486a"/>
+              <circle r="2"   fill="#5a82a8"/>
+            </g>
+            <g id="port-rudder-iate">
+              <rect x="-2.8" y="14" width="5.6" height="16" rx="1.8" fill="#0e1e30" stroke="#1a2e40" stroke-width="0.5"/>
+            </g>
+          </g>
+
+          <rect x="158" y="820" width="28" height="52" rx="6" fill="url(#gIateMotor)" stroke="#050c16" stroke-width="1"/>
+          <line x1="162" y1="830" x2="182" y2="830" stroke="#2a3a4c" stroke-width="0.8"/>
+          <line x1="162" y1="838" x2="182" y2="838" stroke="#2a3a4c" stroke-width="0.8"/>
+          <line x1="162" y1="846" x2="182" y2="846" stroke="#2a3a4c" stroke-width="0.8"/>
+          <line x1="162" y1="854" x2="182" y2="854" stroke="#2a3a4c" stroke-width="0.8"/>
+          <g id="stbd-arr-fwd-iate" opacity="0" filter="url(#fIateGlow)"><polygon points="172,810 164,830 180,830" fill="#00ee88"/></g>
+          <g id="stbd-arr-aft-iate" opacity="0" filter="url(#fIateGlow)"><polygon points="172,892 164,874 180,874" fill="#ff3a3a"/></g>
+          <g transform="translate(172,874)">
+            <g id="stbd-prop-iate" class="blade-grp">
+              <ellipse cx="0" cy="-10" rx="6.5" ry="13" fill="#3a5878"/>
+              <ellipse cx="0" cy="-10" rx="6.5" ry="13" fill="#3a5878" transform="rotate(120)"/>
+              <ellipse cx="0" cy="-10" rx="6.5" ry="13" fill="#3a5878" transform="rotate(240)"/>
+              <circle r="4.5" fill="#28486a"/>
+              <circle r="2"   fill="#5a82a8"/>
+            </g>
+            <g id="stbd-rudder-iate">
+              <rect x="-2.8" y="14" width="5.6" height="16" rx="1.8" fill="#0e1e30" stroke="#1a2e40" stroke-width="0.5"/>
+            </g>
+          </g>
+
+          <text id="rudder-lbl-iate" x="130" y="896" text-anchor="middle"
+                font-size="14" fill="#1e4060" letter-spacing="1.5"
+                font-family="'Courier New',monospace">LEME 0°</text>
+        </svg>
+
+        <!-- ══ LEOPARD 46 CATAMARÃ ══ -->
+        <svg class="vessel-svg" data-vessel="catamara" viewBox="0 0 348 648" width="87" height="162" style="overflow:visible">
+          <defs>
+            <linearGradient id="gCatHullBody" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%"   stop-color="#7a8696"/>
+              <stop offset="15%"  stop-color="#c8d2de"/>
+              <stop offset="55%"  stop-color="#f6f8fa"/>
+              <stop offset="90%"  stop-color="#b4c0cc"/>
+              <stop offset="100%" stop-color="#7a8696"/>
+            </linearGradient>
+            <linearGradient id="gCatSaloon" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%"   stop-color="#f6f8fa"/>
+              <stop offset="100%" stop-color="#a8b4c0"/>
+            </linearGradient>
+            <linearGradient id="gCatGlassB" x1="0%" y1="0%" x2="30%" y2="100%">
+              <stop offset="0%"   stop-color="#8ed2ec" stop-opacity="0.85"/>
+              <stop offset="50%"  stop-color="#2a5878"/>
+              <stop offset="100%" stop-color="#0a1828"/>
+            </linearGradient>
+            <pattern id="pCatTramp" x="0" y="0" width="10" height="10" patternUnits="userSpaceOnUse">
+              <rect width="10" height="10" fill="#1e2a38"/>
+              <line x1="0" y1="0" x2="10" y2="10" stroke="#3a4a5c" stroke-width="0.6"/>
+              <line x1="0" y1="10" x2="10" y2="0" stroke="#3a4a5c" stroke-width="0.6"/>
+            </pattern>
+            <pattern id="pCatTeak" x="0" y="0" width="70" height="8" patternUnits="userSpaceOnUse">
+              <rect width="70" height="8" fill="#b47c48"/>
+              <rect width="70" height="1" y="7" fill="#5e3a10"/>
+            </pattern>
+            <linearGradient id="gCatMotor" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%"   stop-color="#3c4a5c"/>
+              <stop offset="100%" stop-color="#14202e"/>
+            </linearGradient>
+            <filter id="fCatShadowB" x="-8%" y="-5%" width="116%" height="115%">
+              <feDropShadow dx="5" dy="14" stdDeviation="13" flood-color="#000" flood-opacity="0.5"/>
+            </filter>
+            <filter id="fCatGlowB" x="-60%" y="-60%" width="220%" height="220%">
+              <feGaussianBlur stdDeviation="4" result="b"/>
+              <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+          </defs>
+
+          <ellipse cx="180" cy="340" rx="175" ry="300" fill="#000" opacity="0.32" filter="url(#fCatShadowB)"/>
+
+          <!-- Casco BB -->
+          <path d="M 42,12 C 22,40 8,150 6,260 L 4,560 C 4,600 14,624 30,632 L 78,632 C 90,624 94,600 94,560 L 90,260 C 88,150 74,40 56,12 Z"
+                fill="url(#gCatHullBody)" stroke="#0e1a2a" stroke-width="2.5"/>
+          <path d="M 42,26 C 26,56 16,150 14,260 L 12,560" fill="none" stroke="#ffffff" stroke-width="1.5" opacity="0.55"/>
+          <path d="M 56,26 C 72,56 82,150 84,260 L 86,560" fill="none" stroke="#ffffff" stroke-width="1.2" opacity="0.35"/>
+          <rect x="6" y="430" width="4" height="160" fill="#1e5080" opacity="0.8"/>
+          <rect x="88" y="430" width="4" height="160" fill="#1e5080" opacity="0.8"/>
+
+          <!-- Casco BE -->
+          <path d="M 292,12 C 272,40 260,150 258,260 L 256,560 C 256,600 266,624 282,632 L 330,632 C 342,624 344,600 344,560 L 340,260 C 338,150 326,40 306,12 Z"
+                fill="url(#gCatHullBody)" stroke="#0e1a2a" stroke-width="2.5"/>
+          <path d="M 292,26 C 278,56 268,150 266,260 L 264,560" fill="none" stroke="#ffffff" stroke-width="1.5" opacity="0.55"/>
+          <path d="M 306,26 C 322,56 332,150 334,260 L 336,560" fill="none" stroke="#ffffff" stroke-width="1.2" opacity="0.35"/>
+          <rect x="256" y="430" width="4" height="160" fill="#1e5080" opacity="0.8"/>
+          <rect x="338" y="430" width="4" height="160" fill="#1e5080" opacity="0.8"/>
+
+          <!-- Trampolim de proa -->
+          <rect x="94" y="60" width="160" height="130" rx="10" fill="url(#pCatTramp)" stroke="#0a1828" stroke-width="1.5"/>
+          <line x1="94" y1="80"  x2="254" y2="80"  stroke="#4a5668" stroke-width="1"/>
+          <line x1="94" y1="125" x2="254" y2="125" stroke="#4a5668" stroke-width="1"/>
+          <line x1="94" y1="170" x2="254" y2="170" stroke="#4a5668" stroke-width="1"/>
+
+          <!-- Saloon -->
+          <rect x="86" y="200" width="176" height="310" rx="22" fill="url(#gCatSaloon)" stroke="#7a8896" stroke-width="1.5"/>
+          <path d="M 92,214 C 110,202 140,196 174,196 C 208,196 238,202 256,214 L 256,250 L 92,250 Z"
+                fill="url(#gCatGlassB)"/>
+          <path d="M 100,220 C 124,210 148,206 172,206" fill="none" stroke="#c8e8f4" stroke-width="1.3" opacity="0.65"/>
+          <line x1="174" y1="196" x2="174" y2="250" stroke="#6890a8" stroke-width="1"/>
+          <rect x="90" y="266" width="22" height="180" rx="5" fill="url(#gCatGlassB)" stroke="#3a6888" stroke-width="0.8"/>
+          <rect x="94" y="270" width="14" height="70"  rx="4" fill="#bce0ec" opacity="0.5"/>
+          <rect x="236" y="266" width="22" height="180" rx="5" fill="url(#gCatGlassB)" stroke="#3a6888" stroke-width="0.8"/>
+          <rect x="240" y="270" width="14" height="70"  rx="4" fill="#bce0ec" opacity="0.5"/>
+          <!-- Hardtop com painéis -->
+          <rect x="120" y="266" width="108" height="180" rx="8" fill="#1a2838" stroke="#4a5868" stroke-width="0.8"/>
+          <g stroke="#2a3a4c" stroke-width="0.5">
+            <line x1="120" y1="300" x2="228" y2="300"/>
+            <line x1="120" y1="340" x2="228" y2="340"/>
+            <line x1="120" y1="380" x2="228" y2="380"/>
+            <line x1="120" y1="420" x2="228" y2="420"/>
+            <line x1="148" y1="266" x2="148" y2="446"/>
+            <line x1="174" y1="266" x2="174" y2="446"/>
+            <line x1="200" y1="266" x2="200" y2="446"/>
+          </g>
+          <rect x="140" y="460" width="68" height="28" rx="4" fill="#2a3644" stroke="#14202c" stroke-width="0.8"/>
+          <circle cx="174" cy="474" r="8" fill="#3a4a5c" stroke="#14202c" stroke-width="0.8"/>
+
+          <!-- Cockpit ré (teca) -->
+          <path d="M 92,510 L 256,510 L 254,594 C 254,608 224,616 174,618 C 124,616 94,608 94,594 Z"
+                fill="url(#pCatTeak)" stroke="#4a2e10" stroke-width="1"/>
+          <rect x="144" y="548" width="60" height="40" rx="4" fill="#8a6030" stroke="#4a2e10" stroke-width="0.8"/>
+          <path d="M 100,524 L 100,590 M 248,524 L 248,590 M 100,600 L 248,600"
+                fill="none" stroke="#e8e0c0" stroke-width="5" stroke-linecap="round" opacity="0.85"/>
+
+          <line x1="174" y1="270" x2="174" y2="164" stroke="#2a3644" stroke-width="1.6"/>
+          <circle cx="174" cy="164" r="2.8" fill="#cc3030"/>
+
+          <circle cx="12"  cy="200" r="4.5" fill="#cc1818" filter="url(#fCatGlowB)"/>
+          <circle cx="336" cy="200" r="4.5" fill="#0cb040" filter="url(#fCatGlowB)"/>
+
+          <rect x="14" y="250" width="8" height="5" rx="1" fill="#c0c8d0"/>
+          <rect x="326" y="250" width="8" height="5" rx="1" fill="#c0c8d0"/>
+          <rect x="8"  y="480" width="8" height="5" rx="1" fill="#c0c8d0"/>
+          <rect x="332" y="480" width="8" height="5" rx="1" fill="#c0c8d0"/>
+
+          <!-- Motor BB -->
+          <rect x="38" y="618" width="40" height="22" rx="4" fill="url(#gCatMotor)" stroke="#050c16" stroke-width="1"/>
+          <line x1="42" y1="624" x2="74" y2="624" stroke="#2a3a4c" stroke-width="0.6"/>
+          <line x1="42" y1="632" x2="74" y2="632" stroke="#2a3a4c" stroke-width="0.6"/>
+          <g id="port-arr-fwd-cat" opacity="0" filter="url(#fCatGlowB)"><polygon points="58,604 48,620 68,620" fill="#00ee88"/></g>
+          <g id="port-arr-aft-cat" opacity="0" filter="url(#fCatGlowB)"><polygon points="58,702 48,684 68,684" fill="#ff3a3a"/></g>
+          <g transform="translate(58,658)">
+            <g id="port-prop-cat" class="blade-grp">
+              <ellipse cx="0" cy="-12" rx="8" ry="16" fill="#3a5878"/>
+              <ellipse cx="0" cy="-12" rx="8" ry="16" fill="#3a5878" transform="rotate(120)"/>
+              <ellipse cx="0" cy="-12" rx="8" ry="16" fill="#3a5878" transform="rotate(240)"/>
+              <circle r="5.5" fill="#28486a"/>
+              <circle r="2.5" fill="#5a82a8"/>
+            </g>
+            <g id="port-rudder-cat">
+              <rect x="-3" y="16" width="6" height="18" rx="2" fill="#0e1e30" stroke="#1a2e40" stroke-width="0.5"/>
+            </g>
+          </g>
+
+          <!-- Motor BE -->
+          <rect x="270" y="618" width="40" height="22" rx="4" fill="url(#gCatMotor)" stroke="#050c16" stroke-width="1"/>
+          <line x1="274" y1="624" x2="306" y2="624" stroke="#2a3a4c" stroke-width="0.6"/>
+          <line x1="274" y1="632" x2="306" y2="632" stroke="#2a3a4c" stroke-width="0.6"/>
+          <g id="stbd-arr-fwd-cat" opacity="0" filter="url(#fCatGlowB)"><polygon points="290,604 280,620 300,620" fill="#00ee88"/></g>
+          <g id="stbd-arr-aft-cat" opacity="0" filter="url(#fCatGlowB)"><polygon points="290,702 280,684 300,684" fill="#ff3a3a"/></g>
+          <g transform="translate(290,658)">
+            <g id="stbd-prop-cat" class="blade-grp">
+              <ellipse cx="0" cy="-12" rx="8" ry="16" fill="#3a5878"/>
+              <ellipse cx="0" cy="-12" rx="8" ry="16" fill="#3a5878" transform="rotate(120)"/>
+              <ellipse cx="0" cy="-12" rx="8" ry="16" fill="#3a5878" transform="rotate(240)"/>
+              <circle r="5.5" fill="#28486a"/>
+              <circle r="2.5" fill="#5a82a8"/>
+            </g>
+            <g id="stbd-rudder-cat">
+              <rect x="-3" y="16" width="6" height="18" rx="2" fill="#0e1e30" stroke="#1a2e40" stroke-width="0.5"/>
+            </g>
+          </g>
+
+          <text id="rudder-lbl-cat" x="174" y="712" text-anchor="middle"
+                font-size="16" fill="#1e4060" letter-spacing="1.8"
+                font-family="'Courier New',monospace">LEME 0°</text>
+        </svg>
+
+        <!-- ══ RIOSTAR 58 PESQUEIRO ══ -->
+        <svg class="vessel-svg" data-vessel="pesca" viewBox="0 0 305 1015" width="61" height="203" style="overflow:visible">
+          <defs>
+            <linearGradient id="gPescaHullB" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%"   stop-color="#6a7888"/>
+              <stop offset="10%"  stop-color="#b8c4d0"/>
+              <stop offset="50%"  stop-color="#f4f6f8"/>
+              <stop offset="90%"  stop-color="#aab8c4"/>
+              <stop offset="100%" stop-color="#6a7888"/>
+            </linearGradient>
+            <linearGradient id="gPescaCabinB" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%"   stop-color="#f8fafc"/>
+              <stop offset="100%" stop-color="#a8b4c0"/>
+            </linearGradient>
+            <linearGradient id="gPescaGlassB" x1="0%" y1="0%" x2="30%" y2="100%">
+              <stop offset="0%"   stop-color="#8ed0ea" stop-opacity="0.85"/>
+              <stop offset="50%"  stop-color="#2a5878"/>
+              <stop offset="100%" stop-color="#0a1828"/>
+            </linearGradient>
+            <pattern id="pPescaNonskidB" x="0" y="0" width="6" height="6" patternUnits="userSpaceOnUse">
+              <rect width="6" height="6" fill="#3c4858"/>
+              <circle cx="3" cy="3" r="0.6" fill="#5a6a7c"/>
+            </pattern>
+            <linearGradient id="gPescaTower" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%"   stop-color="#f0f4f8"/>
+              <stop offset="100%" stop-color="#98a4b0"/>
+            </linearGradient>
+            <linearGradient id="gPescaMotor" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%"   stop-color="#3a4a5c"/>
+              <stop offset="100%" stop-color="#14202c"/>
+            </linearGradient>
+            <filter id="fPescaShadowB" x="-10%" y="-3%" width="120%" height="110%">
+              <feDropShadow dx="5" dy="16" stdDeviation="14" flood-color="#000" flood-opacity="0.55"/>
+            </filter>
+            <filter id="fPescaGlowB" x="-60%" y="-60%" width="220%" height="220%">
+              <feGaussianBlur stdDeviation="4" result="b"/>
+              <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+          </defs>
+
+          <ellipse cx="158" cy="530" rx="145" ry="475" fill="#000" opacity="0.38" filter="url(#fPescaShadowB)"/>
+
+          <!-- Casco sportfisher -->
+          <path d="M 152,14 C 100,28 42,120 28,260 L 18,700 C 18,820 38,890 68,920 L 236,920 C 266,890 286,820 286,700 L 276,260 C 262,120 204,28 152,14 Z"
+                fill="url(#gPescaHullB)" stroke="#0e1a2a" stroke-width="3"/>
+          <path d="M 152,30 C 110,46 60,125 46,260 L 38,700" fill="none" stroke="#ffffff" stroke-width="2" opacity="0.55"/>
+          <path d="M 152,30 C 194,46 244,125 258,260 L 266,700" fill="none" stroke="#ffffff" stroke-width="1.6" opacity="0.38"/>
+          <path d="M 24,540 L 20,740 C 20,820 36,870 60,896" fill="none" stroke="#1e5080" stroke-width="5" opacity="0.78"/>
+          <path d="M 280,540 L 284,740 C 284,820 268,870 244,896" fill="none" stroke="#1e5080" stroke-width="5" opacity="0.78"/>
+
+          <path d="M 130,48 L 152,30 L 174,48 L 170,84 L 134,84 Z" fill="#d4dce4" stroke="#7a8894" stroke-width="0.8"/>
+          <rect x="144" y="60" width="16" height="20" rx="2" fill="#2a3240"/>
+          <circle cx="152" cy="70" r="3" fill="#6a7888"/>
+
+          <rect x="62" y="360" width="180" height="240" rx="20" fill="url(#gPescaCabinB)" stroke="#7a8896" stroke-width="1.6"/>
+          <path d="M 68,376 C 88,354 120,344 152,344 C 184,344 216,354 236,376 L 236,416 L 68,416 Z"
+                fill="url(#gPescaGlassB)"/>
+          <path d="M 78,382 C 102,364 130,356 152,356" fill="none" stroke="#c8e8f4" stroke-width="1.4" opacity="0.7"/>
+          <line x1="152" y1="344" x2="152" y2="416" stroke="#6890a8" stroke-width="1.2"/>
+          <rect x="64" y="430" width="18" height="150" rx="4" fill="url(#gPescaGlassB)" stroke="#3a6888" stroke-width="0.8"/>
+          <rect x="66" y="434" width="12" height="60"  rx="3" fill="#bce0ec" opacity="0.5"/>
+          <rect x="222" y="430" width="18" height="150" rx="4" fill="url(#gPescaGlassB)" stroke="#3a6888" stroke-width="0.8"/>
+          <rect x="224" y="434" width="12" height="60"  rx="3" fill="#bce0ec" opacity="0.5"/>
+
+          <rect x="92" y="444" width="120" height="130" rx="12" fill="url(#gPescaTower)" stroke="#6a7888" stroke-width="1.2"/>
+          <rect x="100" y="452" width="104" height="38" rx="5" fill="url(#gPescaGlassB)" opacity="0.9"/>
+          <rect x="104" y="454" width="48" height="16" rx="3" fill="#c0e4f0" opacity="0.5"/>
+          <rect x="112" y="500" width="80" height="20" rx="3" fill="#2a3644" stroke="#14202c" stroke-width="0.8"/>
+          <circle cx="152" cy="548" r="12" fill="#3a4a5c" stroke="#14202c" stroke-width="1"/>
+          <circle cx="152" cy="548" r="6"  fill="#1e2834"/>
+
+          <!-- Tuna tower -->
+          <rect x="128" y="404" width="48" height="170" rx="4" fill="none" stroke="#d4dce4" stroke-width="1.2"/>
+          <rect x="136" y="412" width="32" height="40" rx="3" fill="none" stroke="#d4dce4" stroke-width="0.8"/>
+          <!-- Outriggers -->
+          <line x1="100" y1="470" x2="10"  y2="600" stroke="#505868" stroke-width="2" stroke-linecap="round"/>
+          <line x1="204" y1="470" x2="294" y2="600" stroke="#505868" stroke-width="2" stroke-linecap="round"/>
+          <circle cx="10"  cy="600" r="2" fill="#cc3030"/>
+          <circle cx="294" cy="600" r="2" fill="#cc3030"/>
+
+          <line x1="152" y1="444" x2="152" y2="370" stroke="#2a3644" stroke-width="1.5"/>
+          <ellipse cx="152" cy="378" rx="14" ry="4" fill="#b8c4d0" stroke="#6a7888" stroke-width="0.6"/>
+
+          <circle cx="36"  cy="320" r="5" fill="#cc1818" filter="url(#fPescaGlowB)"/>
+          <circle cx="268" cy="320" r="5" fill="#0cb040" filter="url(#fPescaGlowB)"/>
+
+          <!-- Cockpit de pesca -->
+          <path d="M 44,608 L 260,608 L 260,900 C 260,918 228,930 152,932 C 76,930 44,918 44,900 Z"
+                fill="url(#pPescaNonskidB)" stroke="#1a2838" stroke-width="1.5"/>
+
+          <!-- Fighting chair -->
+          <circle cx="152" cy="750" r="30" fill="#f4f6f8" stroke="#6a7888" stroke-width="1.5"/>
+          <circle cx="152" cy="750" r="22" fill="#1a2838"/>
+          <rect x="140" y="720" width="24" height="14" rx="3" fill="#d4dce4" stroke="#6a7888" stroke-width="0.8"/>
+          <rect x="144" y="744" width="16" height="26" rx="3" fill="#6a7888" stroke="#2a3644" stroke-width="0.8"/>
+
+          <rect x="60"  y="640" width="54" height="30" rx="3" fill="#d4dce4" stroke="#6a7888" stroke-width="1"/>
+          <rect x="190" y="640" width="54" height="30" rx="3" fill="#d4dce4" stroke="#6a7888" stroke-width="1"/>
+
+          <g fill="#14202c">
+            <circle cx="58"  cy="680" r="2.5"/><circle cx="58"  cy="710" r="2.5"/>
+            <circle cx="58"  cy="740" r="2.5"/><circle cx="58"  cy="770" r="2.5"/>
+            <circle cx="58"  cy="800" r="2.5"/>
+            <circle cx="246" cy="680" r="2.5"/><circle cx="246" cy="710" r="2.5"/>
+            <circle cx="246" cy="740" r="2.5"/><circle cx="246" cy="770" r="2.5"/>
+            <circle cx="246" cy="800" r="2.5"/>
+          </g>
+
+          <rect x="82"  y="850" width="60" height="44" rx="4" fill="#2a3644" stroke="#14202c" stroke-width="1"/>
+          <rect x="162" y="850" width="60" height="44" rx="4" fill="#2a3644" stroke="#14202c" stroke-width="1"/>
+
+          <rect x="20"  y="300" width="10" height="6" rx="1.5" fill="#c0c8d0"/>
+          <rect x="275" y="300" width="10" height="6" rx="1.5" fill="#c0c8d0"/>
+          <rect x="22"  y="610" width="10" height="6" rx="1.5" fill="#c0c8d0"/>
+          <rect x="273" y="610" width="10" height="6" rx="1.5" fill="#c0c8d0"/>
+
+          <!-- Motor BB -->
+          <rect x="94" y="910" width="36" height="56" rx="6" fill="url(#gPescaMotor)" stroke="#050c16" stroke-width="1"/>
+          <line x1="98"  y1="922" x2="126" y2="922" stroke="#2a3a4c" stroke-width="0.8"/>
+          <line x1="98"  y1="932" x2="126" y2="932" stroke="#2a3a4c" stroke-width="0.8"/>
+          <line x1="98"  y1="942" x2="126" y2="942" stroke="#2a3a4c" stroke-width="0.8"/>
+          <line x1="98"  y1="952" x2="126" y2="952" stroke="#2a3a4c" stroke-width="0.8"/>
+          <g id="port-arr-fwd-pesca" opacity="0" filter="url(#fPescaGlowB)"><polygon points="112,898 102,918 122,918" fill="#00ee88"/></g>
+          <g id="port-arr-aft-pesca" opacity="0" filter="url(#fPescaGlowB)"><polygon points="112,1000 102,978 122,978" fill="#ff3a3a"/></g>
+          <g transform="translate(112,978)">
+            <g id="port-prop-pesca" class="blade-grp">
+              <ellipse cx="0" cy="-12" rx="8" ry="16" fill="#3a5878"/>
+              <ellipse cx="0" cy="-12" rx="8" ry="16" fill="#3a5878" transform="rotate(120)"/>
+              <ellipse cx="0" cy="-12" rx="8" ry="16" fill="#3a5878" transform="rotate(240)"/>
+              <circle r="5.5" fill="#28486a"/>
+              <circle r="2.5" fill="#5a82a8"/>
+            </g>
+            <g id="port-rudder-pesca">
+              <rect x="-3" y="16" width="6" height="20" rx="2" fill="#0e1e30" stroke="#1a2e40" stroke-width="0.6"/>
+            </g>
+          </g>
+
+          <!-- Motor BE -->
+          <rect x="174" y="910" width="36" height="56" rx="6" fill="url(#gPescaMotor)" stroke="#050c16" stroke-width="1"/>
+          <line x1="178" y1="922" x2="206" y2="922" stroke="#2a3a4c" stroke-width="0.8"/>
+          <line x1="178" y1="932" x2="206" y2="932" stroke="#2a3a4c" stroke-width="0.8"/>
+          <line x1="178" y1="942" x2="206" y2="942" stroke="#2a3a4c" stroke-width="0.8"/>
+          <line x1="178" y1="952" x2="206" y2="952" stroke="#2a3a4c" stroke-width="0.8"/>
+          <g id="stbd-arr-fwd-pesca" opacity="0" filter="url(#fPescaGlowB)"><polygon points="192,898 182,918 202,918" fill="#00ee88"/></g>
+          <g id="stbd-arr-aft-pesca" opacity="0" filter="url(#fPescaGlowB)"><polygon points="192,1000 182,978 202,978" fill="#ff3a3a"/></g>
+          <g transform="translate(192,978)">
+            <g id="stbd-prop-pesca" class="blade-grp">
+              <ellipse cx="0" cy="-12" rx="8" ry="16" fill="#3a5878"/>
+              <ellipse cx="0" cy="-12" rx="8" ry="16" fill="#3a5878" transform="rotate(120)"/>
+              <ellipse cx="0" cy="-12" rx="8" ry="16" fill="#3a5878" transform="rotate(240)"/>
+              <circle r="5.5" fill="#28486a"/>
+              <circle r="2.5" fill="#5a82a8"/>
+            </g>
+            <g id="stbd-rudder-pesca">
+              <rect x="-3" y="16" width="6" height="20" rx="2" fill="#0e1e30" stroke="#1a2e40" stroke-width="0.6"/>
+            </g>
+          </g>
+
+          <text id="rudder-lbl-pesca" x="152" y="1010" text-anchor="middle"
+                font-size="16" fill="#1e4060" letter-spacing="1.8"
+                font-family="'Courier New',monospace">LEME 0°</text>
+        </svg>
+
+      </div><!-- /boat-wrap -->
+
+    </div><!-- /scene-wrap -->
+
+    <!-- Info + Dock button -->
+    <div class="scene-foot">
+      <div class="scene-info">
+        <div class="info-box">
+          <div class="info-lbl">Rumo</div>
+          <div class="info-val" id="info-hdg">000°</div>
+        </div>
+        <div class="info-box">
+          <div class="info-lbl">Velocidade</div>
+          <div class="info-val" id="info-spd">0.0 kt</div>
+        </div>
+        <div class="info-box">
+          <div class="info-lbl">Posição</div>
+          <div class="info-val" id="info-pos">—</div>
+        </div>
+      </div>
+      <button class="btn-mode" id="btn-mode">🧭 Vista do Barco</button>
+      <button class="btn-reset" id="btn-dock">⚓ Voltar ao Início</button>
+    </div>
+  </div><!-- /scene-panel -->
+
+  <!-- ══════════════ CONTROLS ══════════════ -->
+  <div class="controls">
+
+    <!-- Tipo de embarcação -->
+    <div class="cfg-section">
+      <div class="cfg-section-lbl">Tipo de embarcação</div>
+      <div class="vessel-picker">
+        <button class="cfg-toggle on" data-vessel="iate-twin">Altamar 50</button>
+        <button class="cfg-toggle"    data-vessel="catamara">Leopard 46</button>
+        <button class="cfg-toggle"    data-vessel="pesca">Riostar 58</button>
+      </div>
+    </div>
+
+    <!-- Ambiente: vento + correnteza -->
+    <div class="cfg-section">
+      <div class="cfg-section-lbl">Ambiente</div>
+      <div class="gain-row">
+        <span class="gain-lbl">Vento 🌬</span>
+        <input type="range" class="gain-slider" id="env-wind-dir" min="0" max="359" value="0" style="--pct:0%">
+        <span class="gain-val" id="gv-wind-dir">N</span>
+      </div>
+      <div class="gain-row">
+        <span class="gain-lbl">Intensidade</span>
+        <input type="range" class="gain-slider" id="env-wind-spd" min="0" max="100" value="0" style="--pct:0%">
+        <span class="gain-val" id="gv-wind-spd">0</span>
+      </div>
+      <div class="gain-row">
+        <span class="gain-lbl">Correnteza 🌊</span>
+        <input type="range" class="gain-slider" id="env-cur-dir" min="0" max="359" value="0" style="--pct:0%">
+        <span class="gain-val" id="gv-cur-dir">N</span>
+      </div>
+      <div class="gain-row">
+        <span class="gain-lbl">Intensidade</span>
+        <input type="range" class="gain-slider" id="env-cur-spd" min="0" max="100" value="0" style="--pct:0%">
+        <span class="gain-val" id="gv-cur-spd">0</span>
+      </div>
+    </div>
+
+    <!-- Configuração de thrusters -->
+    <div class="cfg-section">
+      <div class="cfg-section-lbl">Equipamentos instalados</div>
+      <div class="cfg-row">
+        <span class="cfg-row-lbl">Bow Thruster</span>
+        <button class="cfg-toggle on" id="cfg-bow">● Sim</button>
+      </div>
+      <div class="cfg-row">
+        <span class="cfg-row-lbl">Stern Thruster</span>
+        <button class="cfg-toggle on" id="cfg-stern">● Sim</button>
+      </div>
+    </div>
+
+    <!-- Bow thruster -->
+    <div class="thr-row" id="bow-thr-row">
+      <button class="thr-btn" id="bow-port-btn">◀ BB</button>
+      <span class="thr-row-lbl">Bow Thruster</span>
+      <button class="thr-btn" id="bow-stbd-btn">BE ▶</button>
+    </div>
+
+    <div class="joy-section">
+      <div class="joy-title">Joystick de Propulsão</div>
+      <div class="joy-hint">
+        Arraste o centro → Avanço / Deriva<br>
+        Arraste o anel externo → Guinada
+      </div>
+      <div class="joy-outer" id="joy-outer">
+        <svg class="joy-svg" viewBox="0 0 220 220" id="joy-svg">
+          <circle cx="110" cy="110" r="93" fill="none" stroke="#132030" stroke-width="24"/>
+          <circle cx="110" cy="110" r="93" fill="none" stroke="#1c3248" stroke-width="22" stroke-dasharray="2,14"/>
+          <path id="rot-arc" fill="none" stroke="#4a9ad4" stroke-width="20" stroke-linecap="round" d="" opacity="0.85"/>
+          <g stroke="#243a52" stroke-width="1.5" stroke-linecap="round">
+            <line x1="110" y1="5"   x2="110" y2="18"/>
+            <line x1="156.5" y1="19" x2="151" y2="28.5"/>
+            <line x1="63.5"  y1="19" x2="69"  y2="28.5"/>
+            <line x1="194" y1="56.5" x2="184.5" y2="61"/>
+            <line x1="26"  y1="56.5" x2="35.5"  y2="61"/>
+            <line x1="215" y1="110" x2="202" y2="110"/>
+            <line x1="5"   y1="110" x2="18"  y2="110"/>
+          </g>
+          <text x="110" y="13"  text-anchor="middle" font-size="8" fill="#2a5070" font-family="monospace">0°</text>
+          <text x="24"  y="114" text-anchor="middle" font-size="8" fill="#2a5070">BB</text>
+          <text x="196" y="114" text-anchor="middle" font-size="8" fill="#2a5070">BE</text>
+          <circle id="rot-marker" cx="110" cy="17" r="8" fill="#4a9ad4" stroke="#8ad4f8" stroke-width="2.5"/>
+          <circle cx="110" cy="110" r="78" fill="none" stroke="#1a3050" stroke-width="1.2" stroke-dasharray="4,5"/>
+          <line x1="110" y1="34"  x2="110" y2="186" stroke="#1a3050" stroke-width="1"/>
+          <line x1="34"  y1="110" x2="186" y2="110" stroke="#1a3050" stroke-width="1"/>
+          <circle cx="110" cy="110" r="38" fill="none" stroke="#142840" stroke-width="1"/>
+          <text x="110" y="41"  text-anchor="middle" font-size="8" fill="#2a5070">AV</text>
+          <text x="110" y="183" text-anchor="middle" font-size="8" fill="#2a5070">RÉ</text>
+          <text x="38"  y="114" text-anchor="middle" font-size="8" fill="#2a5070">BB</text>
+          <text x="182" y="114" text-anchor="middle" font-size="8" fill="#2a5070">BE</text>
+        </svg>
+        <div class="joy-handle" id="joy-handle"></div>
+      </div>
+    </div>
+
+    <!-- Gamepad USB -->
+    <div class="gain-wrap" id="gamepad-wrap">
+      <div class="gain-section-lbl" style="display:flex;justify-content:space-between;align-items:center;">
+        <span>Joystick USB</span>
+        <span id="gp-status" style="font-size:9px;color:#1e4060;letter-spacing:0.5px;">desconectado</span>
+      </div>
+      <div class="gain-row">
+        <span class="gain-lbl">Avanço / Ré</span>
+        <select class="gp-axis-sel" id="gp-axis-surge">
+          <option value="1">Eixo 1 (Y)</option><option value="0">Eixo 0 (X)</option>
+          <option value="2">Eixo 2</option><option value="3">Eixo 3</option>
+          <option value="4">Eixo 4</option><option value="5">Eixo 5</option>
+          <option value="-1">—</option>
+        </select>
+        <label class="gp-inv"><input type="checkbox" id="gp-inv-surge" checked>Inv</label>
+      </div>
+      <div class="gain-row">
+        <span class="gain-lbl">Deriva</span>
+        <select class="gp-axis-sel" id="gp-axis-sway">
+          <option value="0">Eixo 0 (X)</option><option value="1">Eixo 1 (Y)</option>
+          <option value="2">Eixo 2</option><option value="3">Eixo 3</option>
+          <option value="4">Eixo 4</option><option value="5">Eixo 5</option>
+          <option value="-1">—</option>
+        </select>
+        <label class="gp-inv"><input type="checkbox" id="gp-inv-sway">Inv</label>
+      </div>
+      <div class="gain-row">
+        <span class="gain-lbl">Guinada</span>
+        <select class="gp-axis-sel" id="gp-axis-yaw">
+          <option value="2">Eixo 2 (Twist)</option><option value="3">Eixo 3</option>
+          <option value="0">Eixo 0 (X)</option><option value="1">Eixo 1 (Y)</option>
+          <option value="4">Eixo 4</option><option value="5">Eixo 5</option>
+          <option value="-1">—</option>
+        </select>
+        <label class="gp-inv"><input type="checkbox" id="gp-inv-yaw">Inv</label>
+      </div>
+    </div>
+
+    <!-- Stern thruster -->
+    <div class="thr-row" id="stern-thr-row">
+      <button class="thr-btn" id="stern-port-btn">◀ BB</button>
+      <span class="thr-row-lbl">Stern Thruster</span>
+      <button class="thr-btn" id="stern-stbd-btn">BE ▶</button>
+    </div>
+
+    <!-- Gain sliders individuais -->
+    <div class="gain-wrap">
+      <div class="gain-section-lbl">Sensibilidade</div>
+      <div class="gain-row">
+        <span class="gain-lbl">Avanço / Ré</span>
+        <input type="range" class="gain-slider" id="gain-surge" min="5" max="100" value="35" style="--pct:35%">
+        <span class="gain-val" id="gv-surge">35%</span>
+      </div>
+      <div class="gain-row">
+        <span class="gain-lbl">Guinada</span>
+        <input type="range" class="gain-slider" id="gain-yaw" min="5" max="100" value="35" style="--pct:35%">
+        <span class="gain-val" id="gv-yaw">35%</span>
+      </div>
+      <div class="gain-row">
+        <span class="gain-lbl">Bow Thruster</span>
+        <input type="range" class="gain-slider" id="gain-bow" min="5" max="100" value="35" style="--pct:35%">
+        <span class="gain-val" id="gv-bow">35%</span>
+      </div>
+      <div class="gain-row">
+        <span class="gain-lbl">Stern Thruster</span>
+        <input type="range" class="gain-slider" id="gain-stern" min="5" max="100" value="35" style="--pct:35%">
+        <span class="gain-val" id="gv-stern">35%</span>
+      </div>
+      <div class="gain-row">
+        <span class="gain-lbl">Torque do Motor</span>
+        <input type="range" class="gain-slider" id="gain-propwalk" min="0" max="100" value="25" style="--pct:25%">
+        <span class="gain-val" id="gv-propwalk">25%</span>
+      </div>
+      <div class="gain-row">
+        <span class="gain-lbl">Inércia</span>
+        <input type="range" class="gain-slider" id="gain-inertia" min="240" max="2000" value="350" style="--pct:6%">
+        <span class="gain-val" id="gv-inertia">45</span>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="rdrow">
+      <div class="rdout"><div class="rdout-lbl">Avanço</div><div class="rdout-val" id="v-surge">0%</div></div>
+      <div class="rdout"><div class="rdout-lbl">Deriva</div><div class="rdout-val"  id="v-sway">0%</div></div>
+      <div class="rdout"><div class="rdout-lbl">Guinada</div><div class="rdout-val" id="v-yaw">0%</div></div>
+    </div>
+
+    <div class="sec-lbl">Atuação dos Propulsores</div>
+    <div class="prop-grid">
+      <div class="prop-card"><div class="prop-lbl">🛥 Hélice BB</div><div class="prop-track"><div class="prop-fill" id="fill-port"></div></div><div class="prop-num" id="num-port">0%</div></div>
+      <div class="prop-card"><div class="prop-lbl">🛥 Hélice BE</div><div class="prop-track"><div class="prop-fill" id="fill-stbd"></div></div><div class="prop-num" id="num-stbd">0%</div></div>
+      <div class="prop-card"><div class="prop-lbl">↔ Bow Thruster</div><div class="prop-track"><div class="prop-fill" id="fill-bow"></div></div><div class="prop-num" id="num-bow">0%</div></div>
+      <div class="prop-card"><div class="prop-lbl">↔ Stern Thruster</div><div class="prop-track"><div class="prop-fill" id="fill-stern"></div></div><div class="prop-num" id="num-stern">0%</div></div>
+    </div>
+
+    <button class="btn-reset" id="btn-reset">⊕ Centralizar Joystick</button>
+  </div><!-- /controls -->
+
+</div><!-- /main -->
+
+<script>
+// ══════════════════════════════════════════════════
+// PERFIS DE EMBARCAÇÃO
+// ══════════════════════════════════════════════════
+// Cada perfil descreve dimensões (px de tela), disponibilidade de thrusters
+// e sobrescreve as constantes físicas. O perfil ativo é aplicado via
+// applyVesselProfile() no setup e toda vez que o usuário troca o tipo.
+const vesselProfiles = {
+  'iate-twin': {
+    // Altamar 50 — iate brasileiro, LOA 15,70 m × boca 4,49 m. Escala 11,5 px/m.
+    name: 'Altamar 50', idSuffix: 'iate',
+    width: 52, height: 180, halfW: 26, halfH: 90,
+    hasBow: true, hasStern: true,
+    windageK: 1.0, currentK: 1.0,
+    // Inércia de comando: ~18 t. Tau em frames (60 fps) ≈ atraso até 63% da resposta.
+    responseTau: 420,
+    physics: { ACCEL:0.11,  ANG_ACCEL:0.0013, THR_SWAY:0.010,
+               BOW_TORQUE:0.0010, STERN_TORQUE:0.0010,
+               PROP_WALK:0.022, DRAG:0.94, ANG_DRAG:0.88,
+               FWD_FACTOR_AHEAD:0.40, FWD_FACTOR_ASTERN:1.20 }
+  },
+  'catamara': {
+    // Leopard 46 — catamarã de lazer, LOA 14,12 m × boca 7,57 m. Escala 11,5 px/m.
+    name: 'Leopard 46', idSuffix: 'cat',
+    width: 87, height: 162, halfW: 43.5, halfH: 81,
+    hasBow: false, hasStern: false,
+    windageK: 1.9, currentK: 0.75,
+    // ~11 t, leve e responsivo — reage rápido aos comandos.
+    responseTau: 260,
+    // 2 cascos afastados → giro fácil (alta ANG_ACCEL, tight fwdFactor),
+    // prop walk quase nulo (motores em cascos opostos cancelam o efeito hélice),
+    // alto arrasto lateral (cascos paralelos resistem ao sway).
+    physics: { ACCEL:0.095, ANG_ACCEL:0.0020, THR_SWAY:0.006,
+               BOW_TORQUE:0.0006, STERN_TORQUE:0.0006,
+               PROP_WALK:0.006, DRAG:0.93, ANG_DRAG:0.82,
+               FWD_FACTOR_AHEAD:0.55, FWD_FACTOR_ASTERN:1.10 }
+  },
+  'pesca': {
+    // Riostar 58 — barco de pesca, LOA 17,68 m × boca ~5,30 m. Escala 11,5 px/m.
+    name: 'Riostar 58', idSuffix: 'pesca',
+    width: 61, height: 203, halfW: 30.5, halfH: 101.5,
+    hasBow: false, hasStern: false,
+    windageK: 0.7, currentK: 1.5,
+    // ~28 t deslocamento pesado — grande inércia de comando, reage com atraso.
+    responseTau: 1100,
+    // Deslocamento pesado: muita inércia, arrasto alto.
+    // Hélice grande de baixa rotação → prop walk muito acentuado.
+    // Círculo de giro largo a vante (leme responde), muito fechado a ré.
+    physics: { ACCEL:0.075, ANG_ACCEL:0.0010, THR_SWAY:0.008,
+               BOW_TORQUE:0.0008, STERN_TORQUE:0.0008,
+               PROP_WALK:0.040, DRAG:0.96, ANG_DRAG:0.92,
+               FWD_FACTOR_AHEAD:0.30, FWD_FACTOR_ASTERN:1.35 }
+  }
+};
+let currentVesselId = 'iate-twin';
+let currentProfile  = vesselProfiles[currentVesselId];
+
+// ══════════════════════════════════════════════════
+// THRUSTER CONFIG (bow / stern instalados?)
+// ══════════════════════════════════════════════════
+let hasBow   = true;
+let hasStern = true;
+
+function setupCfgToggle(cfgId, rowId, getVal, setVal, clearBtn) {
+  const btn = document.getElementById(cfgId);
+  const row = document.getElementById(rowId);
+  const refresh = () => {
+    const on = getVal();
+    btn.textContent = on ? '● Sim' : '○ Não';
+    btn.classList.toggle('on', on);
+    if (row) row.classList.toggle('disabled', !on);
+    if (!on) { clearBtn(); }
+  };
+  btn.addEventListener('click', () => { setVal(!getVal()); refresh(); });
+  refresh();
+}
+setupCfgToggle('cfg-bow',   'bow-thr-row',
+  () => hasBow,   v => { hasBow   = v; },
+  () => { bowBtn   = 0; document.querySelectorAll('#bow-port-btn,#bow-stbd-btn').forEach(b => b.classList.remove('active')); });
+setupCfgToggle('cfg-stern', 'stern-thr-row',
+  () => hasStern, v => { hasStern = v; },
+  () => { sternBtn = 0; document.querySelectorAll('#stern-port-btn,#stern-stbd-btn').forEach(b => b.classList.remove('active')); });
+
+// ══════════════════════════════════════════════════
+// SENSIBILIDADE — ganhos individuais por função
+// ══════════════════════════════════════════════════
+let gainSurge    = 0.35;
+let gainYaw      = 0.35;
+let gainBow      = 0.35;
+let gainStern    = 0.35;
+let gainPropWalk = 0.25;
+
+function setupGainSlider(sliderId, valId, setFn) {
+  const sl = document.getElementById(sliderId);
+  const vl = document.getElementById(valId);
+  sl.addEventListener('input', () => {
+    setFn(sl.value / 100);
+    vl.textContent = sl.value + '%';
+    sl.style.setProperty('--pct', sl.value + '%');
+  });
+}
+setupGainSlider('gain-surge',     'gv-surge',     v => gainSurge    = v);
+setupGainSlider('gain-yaw',       'gv-yaw',       v => gainYaw      = v);
+setupGainSlider('gain-bow',       'gv-bow',       v => gainBow      = v);
+setupGainSlider('gain-stern',     'gv-stern',     v => gainStern    = v);
+setupGainSlider('gain-propwalk',  'gv-propwalk',  v => gainPropWalk = v);
+
+// Slider de inércia: calibra responseTau do perfil ativo.
+// Persistido no próprio vesselProfiles, então cada embarcação lembra do ajuste
+// feito enquanto a sessão está aberta.
+(function setupInertiaSlider() {
+  const sl = document.getElementById('gain-inertia');
+  const vl = document.getElementById('gv-inertia');
+  sl.addEventListener('input', () => {
+    const v = parseInt(sl.value, 10);
+    currentProfile.responseTau = v;
+    vl.textContent = v;
+    sl.style.setProperty('--pct', ((v - 240) / 1760 * 100).toFixed(1) + '%');
+  });
+})();
+
+// ══════════════════════════════════════════════════
+// AMBIENTE — vento + correnteza
+// ══════════════════════════════════════════════════
+let windDir = 0, windSpd = 0;   // windDir = direção DE onde vem (graus); windSpd 0–1
+let curDir  = 0, curSpd  = 0;   // curDir  = direção PARA onde flui  (graus); curSpd 0–1
+
+// Base de constantes; multiplicadas pelo perfil (catamarã pega mais vento, pesqueiro pega mais água)
+const WINDAGE_BASE = 0.00085;   // aceleração por unidade de intensidade
+const CURRENT_BASE = 0.22;      // px/frame por unidade de intensidade
+
+function dirLabel(deg) {
+  const d = ((deg % 360) + 360) % 360;
+  const pts = ['N','NE','E','SE','S','SW','W','NW'];
+  return pts[Math.round(d / 45) % 8] + ' ' + Math.round(d) + '°';
+}
+function setupEnvDir(sliderId, valId, setFn) {
+  const sl = document.getElementById(sliderId);
+  const vl = document.getElementById(valId);
+  const upd = () => {
+    const v = +sl.value;
+    setFn(v);
+    vl.textContent = dirLabel(v);
+    sl.style.setProperty('--pct', (v/359*100).toFixed(1) + '%');
+  };
+  sl.addEventListener('input', upd); upd();
+}
+function setupEnvSpd(sliderId, valId, setFn) {
+  const sl = document.getElementById(sliderId);
+  const vl = document.getElementById(valId);
+  const upd = () => {
+    const v = +sl.value;
+    setFn(v / 100);
+    vl.textContent = v;
+    sl.style.setProperty('--pct', v + '%');
+  };
+  sl.addEventListener('input', upd); upd();
+}
+const envWindArrow = document.getElementById('env-wind-arrow');
+const envCurArrow  = document.getElementById('env-cur-arrow');
+function refreshEnvIndicator() {
+  // Seta nativa aponta para o sul (compass 180°). Para compass D, rotação = (D+180)%360.
+  // Vento: windDir = DE onde vem → direção para onde sopra = (windDir+180) → rotação = windDir
+  envWindArrow.setAttribute('transform', `rotate(${windDir})`);
+  envWindArrow.setAttribute('opacity', windSpd > 0 ? (0.45 + windSpd * 0.55).toFixed(2) : 0);
+  // Correnteza: curDir = PARA onde flui → rotação = (curDir+180)%360
+  envCurArrow.setAttribute('transform',  `rotate(${(curDir + 180) % 360})`);
+  envCurArrow.setAttribute('opacity',  curSpd  > 0 ? (0.45 + curSpd  * 0.55).toFixed(2) : 0);
+}
+setupEnvDir('env-wind-dir', 'gv-wind-dir', v => { windDir = v; refreshEnvIndicator(); });
+setupEnvSpd('env-wind-spd', 'gv-wind-spd', v => { windSpd = v; refreshEnvIndicator(); });
+setupEnvDir('env-cur-dir',  'gv-cur-dir',  v => { curDir  = v; refreshEnvIndicator(); });
+setupEnvSpd('env-cur-spd',  'gv-cur-spd',  v => { curSpd  = v; refreshEnvIndicator(); });
+
+// ══════════════════════════════════════════════════
+// JOYSTICK STATE
+// ══════════════════════════════════════════════════
+const state  = { surge:0, sway:0, yaw:0 };
+const thrust    = { port:0, stbd:0, bow:0, stern:0 };  // aplicado (com lag)
+const cmdThrust = { port:0, stbd:0, bow:0, stern:0 };  // comando instantâneo
+let bowBtn = 0, sternBtn = 0;
+
+const JOY_R    = 110;
+const RING_IN  = 81;
+const HANDLE_R = 32;
+const XY_MAX   = RING_IN - HANDLE_R - 2;  // 47
+
+const joyOuter  = document.getElementById('joy-outer');
+const joyHandle = document.getElementById('joy-handle');
+let xyMode = false, rotMode = false;
+
+function joyCenter() {
+  const r = joyOuter.getBoundingClientRect();
+  return { x: r.left + r.width * 0.5, y: r.top + r.height * 0.5 };
+}
+
+joyHandle.addEventListener('mousedown', e => { xyMode=true; joyHandle.classList.add('active'); e.preventDefault(); e.stopPropagation(); });
+joyHandle.addEventListener('touchstart', e => { xyMode=true; joyHandle.classList.add('active'); e.preventDefault(); e.stopPropagation(); }, {passive:false});
+
+joyOuter.addEventListener('mousedown', e => {
+  if (e.target === joyHandle) return;
+  const c = joyCenter();
+  if (Math.hypot(e.clientX-c.x, e.clientY-c.y) >= RING_IN*0.80) {
+    rotMode=true; applyRot(e.clientX-c.x, e.clientY-c.y); e.preventDefault();
+  }
+});
+joyOuter.addEventListener('touchstart', e => {
+  if (e.target === joyHandle) return;
+  const t=e.touches[0], c=joyCenter();
+  if (Math.hypot(t.clientX-c.x, t.clientY-c.y) >= RING_IN*0.80) {
+    rotMode=true; applyRot(t.clientX-c.x, t.clientY-c.y); e.preventDefault();
+  }
+}, {passive:false});
+
+document.addEventListener('mousemove', e => {
+  if (!xyMode && !rotMode) return;
+  const c=joyCenter();
+  if (xyMode)  applyXY(e.clientX-c.x, e.clientY-c.y);
+  if (rotMode) applyRot(e.clientX-c.x, e.clientY-c.y);
+});
+document.addEventListener('touchmove', e => {
+  if (!xyMode && !rotMode) return;
+  const t=e.touches[0], c=joyCenter();
+  if (xyMode)  applyXY(t.clientX-c.x, t.clientY-c.y);
+  if (rotMode) applyRot(t.clientX-c.x, t.clientY-c.y);
+  e.preventDefault();
+}, {passive:false});
+
+function onRelease() {
+  if (xyMode) { xyMode=false; joyHandle.classList.remove('active'); joyHandle.style.transform='translate(-50%,-50%)'; state.surge=0; state.sway=0; }
+  if (rotMode) { rotMode=false; state.yaw=0; }
+}
+document.addEventListener('mouseup',  onRelease);
+document.addEventListener('touchend', onRelease);
+
+function applyXY(dx, dy) {
+  const dist=Math.hypot(dx,dy);
+  if (dist>XY_MAX) { dx=dx/dist*XY_MAX; dy=dy/dist*XY_MAX; }
+  joyHandle.style.transform=`translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+  state.sway  =  dx/XY_MAX;
+  state.surge = -dy/XY_MAX;
+}
+function applyRot(dx, dy) {
+  const angle=Math.atan2(dx,-dy), MAX_ANG=Math.PI*0.65;
+  state.yaw=Math.max(-1, Math.min(1, angle/MAX_ANG));
+}
+
+// ══════════════════════════════════════════════════
+// ROTATION RING VISUALISATION
+// ══════════════════════════════════════════════════
+const SVG_CX=110, SVG_CY=110, RING_R=93;
+function polar(cx,cy,r,deg) {
+  const rad=(deg-90)*Math.PI/180;
+  return {x:cx+r*Math.cos(rad), y:cy+r*Math.sin(rad)};
+}
+function arcPath(cx,cy,r,fromDeg,toDeg) {
+  if (Math.abs(toDeg-fromDeg)<0.5) return '';
+  const s=polar(cx,cy,r,fromDeg), e=polar(cx,cy,r,toDeg);
+  const large=Math.abs(toDeg-fromDeg)>180?1:0, sweep=toDeg>fromDeg?1:0;
+  return `M${s.x.toFixed(1)},${s.y.toFixed(1)} A${r},${r} 0 ${large},${sweep} ${e.x.toFixed(1)},${e.y.toFixed(1)}`;
+}
+function updateRotViz() {
+  const arc=document.getElementById('rot-arc'), marker=document.getElementById('rot-marker');
+  const yaw=state.yaw, deg=yaw*117;
+  if (Math.abs(deg)<0.8) {
+    arc.setAttribute('d','');
+    marker.setAttribute('cx',SVG_CX); marker.setAttribute('cy',SVG_CY-RING_R);
+    marker.setAttribute('fill','#4a9ad4'); marker.setAttribute('stroke','#8ad4f8');
+    return;
+  }
+  arc.setAttribute('d', arcPath(SVG_CX,SVG_CY,RING_R,0,deg));
+  const col=yaw>0?'#4a9ad4':'#d44a4a';
+  arc.setAttribute('stroke',col);
+  const mp=polar(SVG_CX,SVG_CY,RING_R,deg);
+  marker.setAttribute('cx',mp.x.toFixed(1)); marker.setAttribute('cy',mp.y.toFixed(1));
+  marker.setAttribute('fill',col); marker.setAttribute('stroke',yaw>0?'#8ad4f8':'#f88a8a');
+}
+
+// ══════════════════════════════════════════════════
+// PROPULSION RULES
+// ══════════════════════════════════════════════════
+function clamp(v,lo,hi) { return Math.max(lo,Math.min(hi,v)); }
+
+// Thrusters de proa/popa têm spin-up/spin-down lento na vida real (motor
+// elétrico/hidráulico precisa acelerar o túnel). Aplicamos um lag de 1ª ordem
+// no thrust.bow/stern — comando instantâneo, resposta gradual. Motores
+// principais seguem instantâneos (inércia do casco fica em updatePhysics).
+const THRUSTER_RAMP = 0.025; // ≈63% em ~0.7 s, ~95% em ~2 s (60 fps)
+// ══════════════════════════════════════════════════
+// GAMEPAD (USB) — override do state quando conectado
+// ══════════════════════════════════════════════════
+const gpCfg = {
+  axisSurge: 1, invSurge: true,   // Y no eixo 1, invertido (empurrar = +surge)
+  axisSway:  0, invSway:  false,
+  axisYaw:   2, invYaw:   false,
+  deadzone:  0.08
+};
+const gpStatus = document.getElementById('gp-status');
+function gpBindSel(id, key) {
+  const el = document.getElementById(id);
+  el.value = gpCfg[key];
+  el.addEventListener('change', () => { gpCfg[key] = parseInt(el.value, 10); });
+}
+function gpBindInv(id, key) {
+  const el = document.getElementById(id);
+  el.checked = gpCfg[key];
+  el.addEventListener('change', () => { gpCfg[key] = el.checked; });
+}
+gpBindSel('gp-axis-surge','axisSurge'); gpBindInv('gp-inv-surge','invSurge');
+gpBindSel('gp-axis-sway', 'axisSway');  gpBindInv('gp-inv-sway', 'invSway');
+gpBindSel('gp-axis-yaw',  'axisYaw');   gpBindInv('gp-inv-yaw',  'invYaw');
+
+window.addEventListener('gamepadconnected', e => {
+  gpStatus.textContent = (e.gamepad.id || 'conectado').slice(0, 28);
+  gpStatus.classList.add('on');
+});
+window.addEventListener('gamepaddisconnected', () => {
+  gpStatus.textContent = 'desconectado';
+  gpStatus.classList.remove('on');
+});
+
+function readAxis(gp, idx, inv) {
+  if (idx < 0 || idx >= gp.axes.length) return 0;
+  let v = gp.axes[idx];
+  if (Math.abs(v) < gpCfg.deadzone) return 0;
+  // Reescala após a dead zone para manter o range total [-1, 1]
+  const sign = v < 0 ? -1 : 1;
+  v = sign * (Math.abs(v) - gpCfg.deadzone) / (1 - gpCfg.deadzone);
+  return inv ? -v : v;
+}
+
+// Só polleia se houver pad conectado — senão deixa o joystick on-screen controlar.
+function pollGamepad() {
+  const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+  let gp = null;
+  for (const p of pads) if (p && p.connected) { gp = p; break; }
+  if (!gp) return false;
+  // Atualiza o status com o nome do pad caso o evento tenha sido perdido
+  if (!gpStatus.classList.contains('on')) {
+    gpStatus.textContent = (gp.id || 'conectado').slice(0, 28);
+    gpStatus.classList.add('on');
+  }
+  state.surge = clamp(readAxis(gp, gpCfg.axisSurge, gpCfg.invSurge), -1, 1);
+  state.sway  = clamp(readAxis(gp, gpCfg.axisSway,  gpCfg.invSway),  -1, 1);
+  state.yaw   = clamp(readAxis(gp, gpCfg.axisYaw,   gpCfg.invYaw),   -1, 1);
+  // Feedback visual: move o handle do joystick on-screen proporcionalmente
+  const dx = state.sway  * 82;
+  const dy = -state.surge * 82;
+  joyHandle.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+  return true;
+}
+
+function calcThrust() {
+  const {surge,sway,yaw}=state;
+  thrust.port=0; thrust.stbd=0;
+  let cmdBow = 0, cmdStern = 0;
+  if (Math.abs(yaw)>0.015) {
+    thrust.port=clamp(yaw,-1,1); thrust.stbd=clamp(-yaw,-1,1);
+    cmdBow   = clamp(bowBtn,-1,1);
+    cmdStern = clamp(sternBtn,-1,1);
+  } else {
+    const absSurge=Math.abs(surge), absSway=Math.abs(sway), mag=Math.hypot(surge,sway);
+    let joyBow=0, joyStern=0;
+    if (mag>=0.02) {
+      if (absSurge>=absSway*2)     { thrust.port=surge; thrust.stbd=surge; }
+      else if (absSway>=absSurge*2){ joyBow=sway; joyStern=sway; }
+      else if (sway<0)             { thrust.stbd=surge; }
+      else                         { thrust.port=surge; }
+    }
+    cmdBow   = hasBow   ? clamp(joyBow   + bowBtn,  -1,1) : 0;
+    cmdStern = hasStern ? clamp(joyStern + sternBtn, -1,1) : 0;
+  }
+  // Rampa em direção ao comando (lag do túnel do thruster)
+  thrust.bow   += clamp(cmdBow   - thrust.bow,   -THRUSTER_RAMP, THRUSTER_RAMP);
+  thrust.stern += clamp(cmdStern - thrust.stern, -THRUSTER_RAMP, THRUSTER_RAMP);
+  if (!hasBow)   thrust.bow   = 0;
+  if (!hasStern) thrust.stern = 0;
+}
+
+// ══════════════════════════════════════════════════
+// PHYSICS
+// ══════════════════════════════════════════════════
+const SCENE_W=900, SCENE_H=700;
+// Constantes físicas — mutáveis porque cada perfil de embarcação as sobrescreve
+// via applyVesselProfile(). Os valores abaixo são o default do iate, usados
+// até que applyVesselProfile() rode pela primeira vez.
+let ACCEL             = 0.11;
+let ANG_ACCEL         = 0.0022;
+let THR_SWAY          = 0.010;
+let BOW_TORQUE        = 0.0010;
+let STERN_TORQUE      = 0.0010;
+let PROP_WALK         = 0.022;
+let DRAG              = 0.94;
+let ANG_DRAG          = 0.88;
+let FWD_FACTOR_AHEAD  = 0.40;
+let FWD_FACTOR_ASTERN = 1.80;
+
+// Spawn / botão "Voltar à Doca": águas abertas ao SUL das marinas, proa
+// apontando para o norte (heading=0) em direção à vaga-alvo na marina leste.
+const DOCK = { x: 450, y: 630, heading: 0 };
+const boat = { x:DOCK.x, y:DOCK.y, heading:DOCK.heading, vx:0, vy:0, vr:0 };
+
+// Obstáculos das duas marinas — AABBs. Os fingers têm o tip (lado do canal) e as
+// bordas longas inset em ~4px em relação ao SVG para dar uma pequena folga ao
+// entrar na vaga, evitando "esbarradas fantasmas" no canto do trapiche quando o
+// barco está alinhado com a entrada do berço.
+// Caixa de colisão do finger é menor que o visual (visível = 28 tall × 160 wide).
+// Isso dá ~8 px de folga em cada lado longo, permitindo manobrar para dentro do
+// berço mesmo com leve desalinhamento — o barco raspa o visual sem acionar
+// colisão fantasma. Tip também recolhido para não "pegar" no canto ao entrar.
+const FINGER_INSET_TIP  = 10;
+const FINGER_INSET_SIDE = 11;  // 28 tall → 6 tall de colisão efetiva
+const HULL_PAD = 3;            // folga extra no casco (px subtraídos de extX/extY)
+const OBSTACLES = [
+  // ── Marina oeste (quay x=6-70 y=40-540; 4 fingers visuais x=70-230) ──
+  { x: 6,   y: 40,  w: 64,  h: 500, type: 'quay'   },
+  { x: 70,  y: 60 + FINGER_INSET_SIDE, w: 160 - FINGER_INSET_TIP, h: 28 - 2*FINGER_INSET_SIDE, type: 'finger' },
+  { x: 70,  y: 188 + FINGER_INSET_SIDE, w: 160 - FINGER_INSET_TIP, h: 28 - 2*FINGER_INSET_SIDE, type: 'finger' },
+  { x: 70,  y: 316 + FINGER_INSET_SIDE, w: 160 - FINGER_INSET_TIP, h: 28 - 2*FINGER_INSET_SIDE, type: 'finger' },
+  { x: 70,  y: 444 + FINGER_INSET_SIDE, w: 160 - FINGER_INSET_TIP, h: 28 - 2*FINGER_INSET_SIDE, type: 'finger' },
+  // Barcos aportados L1/L2/L3 — AABB ≈ casco
+  { x: 72,  y: 122, w: 160, h: 34,  type: 'boat'   },
+  { x: 68,  y: 250, w: 170, h: 38,  type: 'boat'   },
+  { x: 66,  y: 377, w: 174, h: 40,  type: 'boat'   },
+  // ── Marina leste (quay x=830-894 y=40-540; 4 fingers visuais x=670-830) ──
+  { x: 830, y: 40,  w: 64,  h: 500, type: 'quay'   },
+  { x: 670 + FINGER_INSET_TIP, y: 60 + FINGER_INSET_SIDE, w: 160 - FINGER_INSET_TIP, h: 28 - 2*FINGER_INSET_SIDE, type: 'finger' },
+  { x: 670 + FINGER_INSET_TIP, y: 188 + FINGER_INSET_SIDE, w: 160 - FINGER_INSET_TIP, h: 28 - 2*FINGER_INSET_SIDE, type: 'finger' },
+  { x: 670 + FINGER_INSET_TIP, y: 316 + FINGER_INSET_SIDE, w: 160 - FINGER_INSET_TIP, h: 28 - 2*FINGER_INSET_SIDE, type: 'finger' },
+  { x: 670 + FINGER_INSET_TIP, y: 444 + FINGER_INSET_SIDE, w: 160 - FINGER_INSET_TIP, h: 28 - 2*FINGER_INSET_SIDE, type: 'finger' },
+  // Barcos aportados R1 e R3
+  { x: 668, y: 122, w: 160, h: 34,  type: 'boat'   },
+  { x: 660, y: 377, w: 174, h: 40,  type: 'boat'   },
+];
+
+// Wake buffer
+const wakePoints = [];
+const MAX_WAKE   = 30;
+let   frameCount = 0;
+
+function updatePhysics() {
+  const h   = boat.heading;
+  const fwdX =  Math.sin(h), fwdY = -Math.cos(h); // forward in screen coords
+  const sidX =  Math.cos(h), sidY =  Math.sin(h); // starboard in screen coords
+
+  // Inércia hidrodinâmica: tau maior = casco mais pesado → aceleração efetiva
+  // menor para o mesmo empuxo (f = m·a, massa relativa ≈ tau/30). Isso é o
+  // atraso físico da resposta do barco ao comando — o motor continua instantâneo.
+  const tau        = Math.max(1, currentProfile.responseTau || 30);
+  const massFactor = Math.max(0.5, Math.min(70, tau / 30));
+  const invMass    = 1 / massFactor;
+
+  // Forças dos motores principais — ganho individual por função
+  const netSurge   = (thrust.port + thrust.stbd) / 2 * ACCEL     * gainSurge;
+  const netYawBase = (thrust.port - thrust.stbd) / 2 * ANG_ACCEL * gainYaw;
+
+  // Círculo de giro assimétrico (comportamento real):
+  //   Avante → fluxo sobre o leme reduz a taxa de rotação → círculo MAIOR (fator < 1)
+  //   A ré   → sem efeito de leme, rotação mais acentuada → círculo MENOR (fator > 1)
+  //   Yaw puro (netSurge ≈ 0) → sem correção (fator = 1)
+  const fwdFactor = netSurge >  0.0004 ? FWD_FACTOR_AHEAD
+                  : netSurge < -0.0004 ? FWD_FACTOR_ASTERN
+                  : 1.0;
+  const netYaw = netYawBase * fwdFactor;
+
+  // Thrusters com ganho independente — cada um gera força lateral + torque próprio
+  //   bow  > 0 → proa vai para BE → rotação CW  (+BOW_TORQUE)
+  //   stern> 0 → popa vai para BE → rotação CCW (-STERN_TORQUE)
+  //   ambos iguais → torques se cancelam → deriva pura lateral
+  const netSway_thr = thrust.bow   * THR_SWAY    * gainBow
+                    + thrust.stern * THR_SWAY    * gainStern;
+  const netYaw_thr  = thrust.bow   * BOW_TORQUE  * gainBow
+                    - thrust.stern * STERN_TORQUE * gainStern;
+
+  // Prop walk: torque do motor cria força lateral (BB avante → esquerda, BE avante → direita)
+  // Ambos motores com mesmo empuxo → cancelam
+  const netSway_propwalk = (-thrust.port + thrust.stbd) * PROP_WALK * gainPropWalk;
+
+  boat.vx += (netSurge * fwdX + netSway_thr * sidX + netSway_propwalk * sidX) * invMass;
+  boat.vy += (netSurge * fwdY + netSway_thr * sidY + netSway_propwalk * sidY) * invMass;
+  boat.vr += (netYaw + netYaw_thr) * invMass;
+
+  // Vento: empurra o barco (dir = DE onde vem; força vai no sentido oposto).
+  // Efeito weathervane: força apontando para a proa tende a girar o barco
+  // até receber vento de popa (casco afetado pela pressão no costado).
+  if (windSpd > 0) {
+    const k  = WINDAGE_BASE * (currentProfile.windageK || 1.0);
+    const wR = (windDir + 180) * Math.PI / 180;   // direção para onde sopra
+    const wx = Math.sin(wR), wy = -Math.cos(wR);
+    boat.vx += wx * windSpd * k;
+    boat.vy += wy * windSpd * k;
+    // Torque weathervane: componente lateral (dot com sidX/sidY) gera guinada
+    const sideDot = wx * sidX + wy * sidY;
+    boat.vr += sideDot * windSpd * k * 0.08;
+  }
+
+  // Drag escalado pela massa: inércia atrasa a mudança mas não reduz a velocidade
+  // final. Se accel = F·invMass e drag = 1 - (1-DRAG)·invMass, a velocidade
+  // terminal F/(1-DRAG) independe da massa. Pesado só leva mais tempo para
+  // chegar lá (e mais tempo para parar/reverter).
+  const dragLin = 1 - (1 - DRAG)     * invMass;
+  const dragAng = 1 - (1 - ANG_DRAG) * invMass;
+  boat.vx *= dragLin;
+  boat.vy *= dragLin;
+  boat.vr *= dragAng;
+
+  boat.x += boat.vx;
+  boat.y += boat.vy;
+  boat.heading += boat.vr;
+
+  // Correnteza: desloca o barco junto com a água (aplicado após drag).
+  // dir = PARA onde flui. Pesqueiros/catamarãs reagem diferente via factor.
+  if (curSpd > 0) {
+    const k  = CURRENT_BASE * (currentProfile.currentK || 1.0);
+    const cR = curDir * Math.PI / 180;
+    boat.x += Math.sin(cR)  * curSpd * k;
+    boat.y += -Math.cos(cR) * curSpd * k;
+  }
+
+  // Scene boundary — margem conservadora (maior semi-eixo) para o barco não
+  // sair da tela em qualquer rumo.
+  const sceneR = Math.max(currentProfile.halfW, currentProfile.halfH) * 0.55 + 8;
+  if (boat.x < sceneR) { boat.x=sceneR; if(boat.vx<0){boat.vx*=-0.25;} }
+  if (boat.x > SCENE_W-sceneR) { boat.x=SCENE_W-sceneR; if(boat.vx>0){boat.vx*=-0.25;} }
+  if (boat.y < sceneR) { boat.y=sceneR; if(boat.vy<0){boat.vy*=-0.25;} }
+  if (boat.y > SCENE_H-sceneR) { boat.y=SCENE_H-sceneR; if(boat.vy>0){boat.vy*=-0.25;} }
+
+  // Colisão com obstáculos — AABB rotacionada para o barco, AABB fixa para
+  // o obstáculo. Obstáculos: quay principal, 4 fingers e 2 barcos aportados.
+  // Envelope elíptico do casco (mais justo que AABB rotacionada para cascos
+  // alongados): rectangle-AABB overestima ~20% a mais em ângulos de 10-30°,
+  // criando "colisão fantasma" antes do contato visual. Elipse com semi-eixos
+  // (halfW, halfH) tem half-extent(θ) = √((halfW·sin)² + (halfH·cos)²).
+  const cH = Math.cos(boat.heading), sH = Math.sin(boat.heading);
+  const hW = currentProfile.halfW, hH = currentProfile.halfH;
+  const extX = Math.max(2, Math.sqrt((hW*cH)*(hW*cH) + (hH*sH)*(hH*sH)) - HULL_PAD);
+  const extY = Math.max(2, Math.sqrt((hW*sH)*(hW*sH) + (hH*cH)*(hH*cH)) - HULL_PAD);
+  for (const o of OBSTACLES) {
+    if (boat.x - extX < o.x + o.w && boat.x + extX > o.x &&
+        boat.y - extY < o.y + o.h && boat.y + extY > o.y) {
+      const penRight = (o.x + o.w + extX) - boat.x;
+      const penLeft  = boat.x - (o.x - extX);
+      const penDown  = (o.y + o.h + extY) - boat.y;
+      const penUp    = boat.y - (o.y - extY);
+      const minPen = Math.min(penRight, penLeft, penDown, penUp);
+      // Grazing contact (< 1.5 px overlap): trata como raspão — snap posição e
+      // amortece a velocidade normal, sem quicar. Evita "esbarrada fantasma" no
+      // canto do finger ao entrar/sair do berço.
+      const graze = minPen < 1.5;
+      const resti = graze ? 0 : 0.2;
+      const damp  = graze ? 0.4 : 1.0;
+      if (minPen === penRight)      { boat.x = o.x + o.w + extX; if (boat.vx < 0) boat.vx = Math.abs(boat.vx) * resti;  else boat.vx *= damp; }
+      else if (minPen === penLeft)  { boat.x = o.x - extX;       if (boat.vx > 0) boat.vx = -Math.abs(boat.vx) * resti; else boat.vx *= damp; }
+      else if (minPen === penDown)  { boat.y = o.y + o.h + extY; if (boat.vy < 0) boat.vy = Math.abs(boat.vy) * resti;  else boat.vy *= damp; }
+      else                          { boat.y = o.y - extY;       if (boat.vy > 0) boat.vy = -Math.abs(boat.vy) * resti; else boat.vy *= damp; }
+      boat.vr *= graze ? 0.85 : 0.5;
+    }
+  }
+
+  // Record wake
+  frameCount++;
+  if (frameCount % 3 === 0) {
+    wakePoints.push({x: boat.x, y: boat.y});
+    if (wakePoints.length > MAX_WAKE) wakePoints.shift();
+  }
+}
+
+// ══════════════════════════════════════════════════
+// MODO DE VISUALIZAÇÃO
+// ══════════════════════════════════════════════════
+const SCENE_CX = 450, SCENE_CY = 350;
+let egoMode = false;
+
+const btnMode = document.getElementById('btn-mode');
+btnMode.addEventListener('click', () => {
+  egoMode = !egoMode;
+  btnMode.textContent = egoMode ? '🗺 Cena Normal' : '🧭 Vista do Barco';
+  btnMode.classList.toggle('ego', egoMode);
+  wakePoints.length = 0; // limpa rastro ao trocar de modo
+  if (!egoMode) worldG.setAttribute('transform', ''); // reseta mundo ao voltar ao normal
+});
+
+// ══════════════════════════════════════════════════
+// BOAT / WORLD TRANSFORM (bifurca pelo modo)
+// ══════════════════════════════════════════════════
+const boatWrap = document.getElementById('boat-wrap');
+const worldG   = document.getElementById('world-g');
+
+function updateBoatTransform() {
+  const hx = currentProfile.halfW, hy = currentProfile.halfH;
+  if (egoMode) {
+    // Ego: barco fixo no centro, proa sempre para cima; mundo se move
+    boatWrap.style.left      = (SCENE_CX - hx) + 'px';
+    boatWrap.style.top       = (SCENE_CY - hy) + 'px';
+    boatWrap.style.transform = 'none';
+    const deg = -(boat.heading * 180 / Math.PI).toFixed(4);
+    worldG.setAttribute('transform',
+      `translate(${SCENE_CX},${SCENE_CY}) rotate(${deg}) translate(${(-boat.x).toFixed(2)},${(-boat.y).toFixed(2)})`);
+  } else {
+    // Normal: barco se move pela cena, mundo fixo
+    const deg = (boat.heading * 180 / Math.PI).toFixed(4);
+    boatWrap.style.left      = (boat.x - hx) + 'px';
+    boatWrap.style.top       = (boat.y - hy) + 'px';
+    boatWrap.style.transform = `rotate(${deg}deg)`;
+    worldG.setAttribute('transform', '');
+  }
+}
+
+// Converte ponto mundial → tela (para wake no modo ego)
+function worldToScreen(wx, wy) {
+  const dx = wx - boat.x, dy = wy - boat.y;
+  const h = -boat.heading, c = Math.cos(h), s = Math.sin(h);
+  return { x: dx*c - dy*s + SCENE_CX, y: dx*s + dy*c + SCENE_CY };
+}
+
+// ══════════════════════════════════════════════════
+// OVERLAY (heading line + wake)
+// ══════════════════════════════════════════════════
+const hdgLine      = document.getElementById('hdg-line');
+const wakePoly     = document.getElementById('wake-poly');
+const compassNeedle= document.getElementById('compass-needle');
+
+function updateOverlay() {
+  const speed = Math.hypot(boat.vx, boat.vy);
+
+  if (egoMode) {
+    // ── EGO: barco no centro, proa sempre para cima ──
+    hdgLine.setAttribute('x1', SCENE_CX); hdgLine.setAttribute('y1', SCENE_CY);
+    hdgLine.setAttribute('x2', SCENE_CX); hdgLine.setAttribute('y2', SCENE_CY - 72);
+
+    // Agulha gira para mostrar o norte real
+    compassNeedle.setAttribute('transform',
+      `rotate(${(boat.heading * 180 / Math.PI).toFixed(3)})`);
+
+    // Wake: world → tela
+    if (wakePoints.length > 2 && speed > 0.15) {
+      const pts = wakePoints.map(p => {
+        const s = worldToScreen(p.x, p.y);
+        return `${s.x.toFixed(1)},${s.y.toFixed(1)}`;
+      }).join(' ');
+      wakePoly.setAttribute('points', pts);
+      wakePoly.setAttribute('opacity', Math.min(speed * 0.35, 0.55).toFixed(2));
+    } else {
+      wakePoly.setAttribute('opacity', '0');
+    }
+  } else {
+    // ── NORMAL: barco se move, mundo fixo (world = screen) ──
+    const h = boat.heading;
+    hdgLine.setAttribute('x1', boat.x.toFixed(1));
+    hdgLine.setAttribute('y1', boat.y.toFixed(1));
+    hdgLine.setAttribute('x2', (boat.x + Math.sin(h)*72).toFixed(1));
+    hdgLine.setAttribute('y2', (boat.y - Math.cos(h)*72).toFixed(1));
+
+    // Agulha aponta sempre para norte (= cima da tela) no modo normal
+    compassNeedle.setAttribute('transform', 'rotate(0)');
+
+    // Wake: coordenadas mundiais = coordenadas de tela no modo normal
+    if (wakePoints.length > 2 && speed > 0.15) {
+      const pts = wakePoints.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+      wakePoly.setAttribute('points', pts);
+      wakePoly.setAttribute('opacity', Math.min(speed * 0.35, 0.55).toFixed(2));
+    } else {
+      wakePoly.setAttribute('opacity', '0');
+    }
+  }
+}
+
+// ══════════════════════════════════════════════════
+// INFO OVERLAY
+// ══════════════════════════════════════════════════
+const infoHdg = document.getElementById('info-hdg');
+const infoSpd = document.getElementById('info-spd');
+const infoPos = document.getElementById('info-pos');
+
+// ══════════════════════════════════════════════════
+// CHRONOMETER — inicia no primeiro comando, para ao atracar na vaga
+// ══════════════════════════════════════════════════
+// Vaga-alvo (marina leste, berço 2): x=675..830, y=218..314 → centro (752.5, 266).
+// Proa ideal apontada para oeste (entrando na vaga) = heading = -π/2 (270°) ou +π/2?
+// A vaga é à direita, fingers em cima/baixo; o barco entra pela esquerda (x menor → maior)
+// e fica paralelo ao cais leste (proa apontada para leste OU oeste aceita).
+const TARGET = { cx: 752.5, cy: 266, halfW: 70, halfH: 42 };
+const chronoEl    = document.getElementById('chrono');
+const chronoValEl = document.getElementById('chrono-val');
+let chronoStart = null;   // ms — null = ainda não iniciou
+let chronoEnd   = null;   // ms — preenchido no sucesso
+let dockHoldMs  = 0;      // tempo acumulado dentro da vaga com velocidade baixa
+const DOCK_HOLD_REQUIRED = 1500; // ms estacionado para validar atracação
+
+function chronoReset() {
+  chronoStart = null; chronoEnd = null; dockHoldMs = 0;
+  chronoEl.classList.remove('running','done');
+  chronoValEl.textContent = '00:00.0';
+}
+function fmtChrono(ms) {
+  const s = ms / 1000;
+  const m = Math.floor(s / 60);
+  const r = s - m * 60;
+  return String(m).padStart(2,'0') + ':' + r.toFixed(1).padStart(4,'0');
+}
+let prevFrameMs = performance.now();
+function updateChrono() {
+  const now = performance.now();
+  const dt  = now - prevFrameMs;
+  prevFrameMs = now;
+
+  // Início: primeira vez que há qualquer comando (joystick ou botões de thruster)
+  if (chronoStart === null) {
+    const cmdActive = Math.abs(state.surge) > 0.02 || Math.abs(state.sway) > 0.02
+                   || Math.abs(state.yaw)   > 0.02 || bowBtn !== 0 || sternBtn !== 0;
+    if (cmdActive) {
+      chronoStart = now;
+      chronoEl.classList.add('running');
+    }
+    return;
+  }
+  // Já terminou: congela o display
+  if (chronoEnd !== null) return;
+
+  // Atualiza display enquanto corre
+  chronoValEl.textContent = fmtChrono(now - chronoStart);
+
+  // Verifica atracação: centro do barco dentro da vaga, velocidade baixa,
+  // proa alinhada com o eixo leste/oeste (±25°)
+  const dx = Math.abs(boat.x - TARGET.cx);
+  const dy = Math.abs(boat.y - TARGET.cy);
+  const spd = Math.hypot(boat.vx, boat.vy);
+  // heading: 0=norte, π/2=leste, -π/2=oeste. Aceita leste ou oeste.
+  const h = ((boat.heading % (2*Math.PI)) + 2*Math.PI) % (2*Math.PI);
+  const dEast = Math.min(Math.abs(h - Math.PI/2), Math.abs(h - Math.PI/2 - 2*Math.PI));
+  const dWest = Math.min(Math.abs(h - 3*Math.PI/2), Math.abs(h - 3*Math.PI/2 - 2*Math.PI));
+  const aligned = Math.min(dEast, dWest) < (25 * Math.PI / 180);
+
+  const inBerth = dx < TARGET.halfW && dy < TARGET.halfH && spd < 0.35 && aligned;
+  if (inBerth) {
+    dockHoldMs += dt;
+    if (dockHoldMs >= DOCK_HOLD_REQUIRED) {
+      chronoEnd = now;
+      chronoEl.classList.remove('running');
+      chronoEl.classList.add('done');
+      chronoValEl.textContent = fmtChrono(chronoEnd - chronoStart);
+    }
+  } else {
+    dockHoldMs = 0;
+  }
+}
+
+function updateInfoOverlay() {
+  let deg = (boat.heading * 180 / Math.PI) % 360;
+  if (deg < 0) deg += 360;
+  infoHdg.textContent = deg.toFixed(0).padStart(3,'0') + '°';
+  const spd = Math.hypot(boat.vx, boat.vy) * 4.2;
+  infoSpd.textContent = spd.toFixed(1) + ' kt';
+  // Relative to dock
+  const dx = Math.round(boat.x - DOCK.x);
+  const dy = Math.round(-(boat.y - DOCK.y)); // y inverted (north positive)
+  infoPos.textContent = `${dx>0?'+':''}${dx}m ${dy>0?'+':''}${dy}m`;
+}
+
+// ══════════════════════════════════════════════════
+// PROPELLER & ARROW ANIMATIONS
+// ══════════════════════════════════════════════════
+// IDs dos elementos do barco ativo — populado por applyVesselProfile().
+// Cada vessel-svg usa o mesmo base name + sufixo (ex: "port-prop-iate",
+// "port-prop-cat"). Ao trocar de perfil, cacheamos os refs para evitar
+// consultas repetidas a cada frame.
+let activeEls = {};
+function cacheActiveEls(vesselId) {
+  const sfx = '-' + vesselProfiles[vesselId].idSuffix;
+  const byId = base => document.getElementById(base + sfx);
+  activeEls = {
+    portProp:  byId('port-prop'),   stbdProp:  byId('stbd-prop'),
+    bowProp:   byId('bow-prop'),    sternProp: byId('stern-prop'),
+    portArrFwd:  byId('port-arr-fwd'),  portArrAft: byId('port-arr-aft'),
+    stbdArrFwd:  byId('stbd-arr-fwd'),  stbdArrAft: byId('stbd-arr-aft'),
+    bowArrLeft:  byId('bow-arr-left'),  bowArrRight: byId('bow-arr-right'),
+    sternArrLeft: byId('stern-arr-left'), sternArrRight: byId('stern-arr-right'),
+    portRudder: byId('port-rudder'), stbdRudder: byId('stbd-rudder'),
+    rudderLbl:  byId('rudder-lbl')
+  };
+}
+function spinPropEl(el, val, invertCW=false) {
+  if (!el) return;
+  const abs=Math.abs(val);
+  if (abs<0.018) { el.style.animationPlayState='paused'; return; }
+  el.style.animationDuration=(1.5/abs)+'s';
+  const goFwd=val>0, isCW=invertCW?!goFwd:goFwd;
+  el.style.animationName      = isCW?'spin-cw':'spin-ccw';
+  el.style.animationPlayState = 'running';
+}
+function setArrowEl(el, show) {
+  if (el) el.setAttribute('opacity', show?'1':'0');
+}
+function updateAnims() {
+  spinPropEl(activeEls.portProp,  thrust.port,  true);
+  spinPropEl(activeEls.stbdProp,  thrust.stbd,  false);
+  spinPropEl(activeEls.bowProp,   thrust.bow,   false);
+  spinPropEl(activeEls.sternProp, thrust.stern, false);
+  setArrowEl(activeEls.portArrFwd,  thrust.port >  0.04);
+  setArrowEl(activeEls.portArrAft,  thrust.port < -0.04);
+  setArrowEl(activeEls.stbdArrFwd,  thrust.stbd >  0.04);
+  setArrowEl(activeEls.stbdArrAft,  thrust.stbd < -0.04);
+  setArrowEl(activeEls.bowArrRight,   thrust.bow   >  0.04);
+  setArrowEl(activeEls.bowArrLeft,    thrust.bow   < -0.04);
+  setArrowEl(activeEls.sternArrRight, thrust.stern >  0.04);
+  setArrowEl(activeEls.sternArrLeft,  thrust.stern < -0.04);
+  const ang=state.yaw*38;
+  const rot = `rotate(${ang.toFixed(1)},0,24)`;
+  if (activeEls.portRudder) activeEls.portRudder.setAttribute('transform', rot);
+  if (activeEls.stbdRudder) activeEls.stbdRudder.setAttribute('transform', rot);
+  if (activeEls.rudderLbl)  activeEls.rudderLbl.textContent=`LEME  ${ang>=0?'+':''}${ang.toFixed(0)}°`;
+}
+
+// ══════════════════════════════════════════════════
+// READOUTS
+// ══════════════════════════════════════════════════
+const pct  = v => Math.round(v*100);
+const sign = v => v>0?'+':'';
+function setRdout(id,v) {
+  const el=document.getElementById(id); if(!el)return;
+  el.textContent=`${sign(v)}${pct(v)}%`;
+  el.className='rdout-val '+(v>0.02?'pos':v<-0.02?'neg':'');
+}
+function setBar(fid,nid,v) {
+  const fill=document.getElementById(fid), num=document.getElementById(nid);
+  if (!fill||!num) return;
+  const abs=Math.abs(v)*100;
+  if (v>=0) { fill.style.left='50%'; fill.style.width=(abs/2)+'%'; fill.style.background='#26d46a'; }
+  else      { fill.style.left=(50-abs/2)+'%'; fill.style.width=(abs/2)+'%'; fill.style.background='#e04040'; }
+  num.textContent=`${sign(v)}${Math.round(abs)}%`;
+  num.style.color=v<-0.02?'#e04040':v>0.02?'#26d46a':'#4a88b0';
+}
+function updateReadouts() {
+  setRdout('v-surge',state.surge); setRdout('v-sway',state.sway); setRdout('v-yaw',state.yaw);
+  setBar('fill-port','num-port',thrust.port); setBar('fill-stbd','num-stbd',thrust.stbd);
+  setBar('fill-bow','num-bow',thrust.bow);    setBar('fill-stern','num-stern',thrust.stern);
+}
+
+// ══════════════════════════════════════════════════
+// GAME LOOP
+// ══════════════════════════════════════════════════
+function gameLoop() {
+  pollGamepad();
+  calcThrust();
+  updatePhysics();
+  updateBoatTransform();
+  updateOverlay();
+  updateAnims();
+  updateReadouts();
+  updateRotViz();
+  updateInfoOverlay();
+  updateChrono();
+  requestAnimationFrame(gameLoop);
+}
+
+// ══════════════════════════════════════════════════
+// THRUSTER BUTTONS
+// ══════════════════════════════════════════════════
+function setupThrBtn(el, type, dir) {
+  if (!el) return;
+  const press  = () => { if(type==='bow')bowBtn=dir; else sternBtn=dir; el.classList.add('active'); };
+  const release= () => { if(type==='bow')bowBtn=0;   else sternBtn=0;   el.classList.remove('active'); };
+  el.addEventListener('mousedown',   e=>{press();e.preventDefault();});
+  el.addEventListener('mouseup',     release);
+  el.addEventListener('mouseleave',  release);
+  el.addEventListener('touchstart',  e=>{press();e.preventDefault();},{passive:false});
+  el.addEventListener('touchend',    release);
+  el.addEventListener('touchcancel', release);
+}
+setupThrBtn(document.getElementById('bow-port-btn'),   'bow',   -1);
+setupThrBtn(document.getElementById('bow-stbd-btn'),   'bow',   +1);
+setupThrBtn(document.getElementById('stern-port-btn'), 'stern', -1);
+setupThrBtn(document.getElementById('stern-stbd-btn'), 'stern', +1);
+
+// ══════════════════════════════════════════════════
+// RESET BUTTONS
+// ══════════════════════════════════════════════════
+document.getElementById('btn-reset').addEventListener('click', () => {
+  state.surge=0; state.sway=0; state.yaw=0;
+  bowBtn=0; sternBtn=0;
+  joyHandle.style.transform='translate(-50%,-50%)';
+  document.querySelectorAll('.thr-btn').forEach(b=>b.classList.remove('active'));
+});
+
+document.getElementById('btn-dock').addEventListener('click', () => {
+  boat.x=DOCK.x; boat.y=DOCK.y; boat.heading=DOCK.heading;
+  boat.vx=0; boat.vy=0; boat.vr=0;
+  wakePoints.length=0;
+  state.surge=0; state.sway=0; state.yaw=0;
+  bowBtn=0; sternBtn=0;
+  joyHandle.style.transform='translate(-50%,-50%)';
+  document.querySelectorAll('.thr-btn').forEach(b=>b.classList.remove('active'));
+  chronoReset();
+});
+
+// ══════════════════════════════════════════════════
+// VESSEL PROFILE — aplicação e troca
+// ══════════════════════════════════════════════════
+const vesselSvgs = document.querySelectorAll('#boat-wrap .vessel-svg');
+
+function applyVesselProfile(id) {
+  const prof = vesselProfiles[id];
+  if (!prof) return;
+  currentVesselId = id;
+  currentProfile  = prof;
+
+  // 1) Constantes físicas → variáveis do perfil
+  const p = prof.physics;
+  ACCEL=p.ACCEL; ANG_ACCEL=p.ANG_ACCEL; THR_SWAY=p.THR_SWAY;
+  BOW_TORQUE=p.BOW_TORQUE; STERN_TORQUE=p.STERN_TORQUE;
+  PROP_WALK=p.PROP_WALK; DRAG=p.DRAG; ANG_DRAG=p.ANG_DRAG;
+  FWD_FACTOR_AHEAD=p.FWD_FACTOR_AHEAD; FWD_FACTOR_ASTERN=p.FWD_FACTOR_ASTERN;
+
+  // 2) Equipamentos instalados para o perfil
+  hasBow   = prof.hasBow;
+  hasStern = prof.hasStern;
+  bowBtn = 0; sternBtn = 0;
+  // Reaplica estado visual das toggles (texto, classe .on, linha desabilitada)
+  const cfgBow   = document.getElementById('cfg-bow');
+  const cfgStern = document.getElementById('cfg-stern');
+  const bowRow   = document.getElementById('bow-thr-row');
+  const stRow    = document.getElementById('stern-thr-row');
+  if (cfgBow)   { cfgBow.textContent   = hasBow   ? '● Sim' : '○ Não'; cfgBow.classList.toggle('on', hasBow); }
+  if (cfgStern) { cfgStern.textContent = hasStern ? '● Sim' : '○ Não'; cfgStern.classList.toggle('on', hasStern); }
+  if (bowRow)   bowRow.classList.toggle('disabled', !hasBow);
+  if (stRow)    stRow.classList.toggle('disabled', !hasStern);
+  document.querySelectorAll('.thr-btn').forEach(b => b.classList.remove('active'));
+
+  // 3) Alterna SVGs visíveis + dimensiona boat-wrap
+  vesselSvgs.forEach(sv => sv.classList.toggle('active', sv.dataset.vessel === id));
+  const bw = document.getElementById('boat-wrap');
+  bw.style.width  = prof.width  + 'px';
+  bw.style.height = prof.height + 'px';
+
+  // 4) Cache de elementos do SVG ativo
+  cacheActiveEls(id);
+
+  // 5) Spawn em águas abertas ao sul das marinas, proa apontando para o norte
+  //    — o desafio é navegar até a vaga na marina leste e entrar no berço.
+  DOCK.x = 450; DOCK.y = 630; DOCK.heading = 0;
+  boat.x = DOCK.x; boat.y = DOCK.y; boat.heading = DOCK.heading;
+  boat.vx = 0; boat.vy = 0; boat.vr = 0;
+  wakePoints.length = 0;
+  state.surge = 0; state.sway = 0; state.yaw = 0;
+  joyHandle.style.transform = 'translate(-50%,-50%)';
+
+  // 6) Reseta sliders de ganho para os defaults (35% / 25%)
+  //    Mantê-los do perfil anterior distorce o comportamento do novo.
+  const resetSlider = (sid, vid, val, setFn) => {
+    const sl = document.getElementById(sid), vl = document.getElementById(vid);
+    if (!sl || !vl) return;
+    sl.value = val; vl.textContent = val + '%'; sl.style.setProperty('--pct', val+'%');
+    setFn(val / 100);
+  };
+  resetSlider('gain-surge',    'gv-surge',    35, v => gainSurge    = v);
+  resetSlider('gain-yaw',      'gv-yaw',      35, v => gainYaw      = v);
+  resetSlider('gain-bow',      'gv-bow',      35, v => gainBow      = v);
+  resetSlider('gain-stern',    'gv-stern',    35, v => gainStern    = v);
+  resetSlider('gain-propwalk', 'gv-propwalk', 25, v => gainPropWalk = v);
+
+  // Slider de inércia sincroniza com o responseTau do perfil ativo.
+  const slI = document.getElementById('gain-inertia');
+  const vlI = document.getElementById('gv-inertia');
+  if (slI && vlI) {
+    const tau = prof.responseTau || 45;
+    slI.value = tau; vlI.textContent = tau;
+    slI.style.setProperty('--pct', ((tau - 240) / 1760 * 100).toFixed(1) + '%');
+  }
+
+  // 7) Atualiza o estado .on dos botões do picker
+  document.querySelectorAll('.vessel-picker .cfg-toggle').forEach(b => {
+    b.classList.toggle('on', b.dataset.vessel === id);
+  });
+}
+
+// Picker de embarcação — botões do card "Tipo de embarcação"
+document.querySelectorAll('.vessel-picker .cfg-toggle').forEach(btn => {
+  btn.addEventListener('click', () => applyVesselProfile(btn.dataset.vessel));
+});
+
+// Aplica o perfil inicial antes de iniciar o loop.
+applyVesselProfile(currentVesselId);
+
+// ══════════════════════════════════════════════════
+// START
+// ══════════════════════════════════════════════════
+gameLoop();
+</script>
+</body>
+</html>

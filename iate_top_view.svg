@@ -1,0 +1,120 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 420" width="300" height="420">
+  <defs>
+    <linearGradient id="hullGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#1a3a5c"/>
+      <stop offset="50%" style="stop-color:#1e4d7b"/>
+      <stop offset="100%" style="stop-color:#1a3a5c"/>
+    </linearGradient>
+    <linearGradient id="deckGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#ddd0b8"/>
+      <stop offset="50%" style="stop-color:#f0e4cc"/>
+      <stop offset="100%" style="stop-color:#ddd0b8"/>
+    </linearGradient>
+    <linearGradient id="cabinGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#c8dff0"/>
+      <stop offset="100%" style="stop-color:#8aaec8"/>
+    </linearGradient>
+    <filter id="shadow">
+      <feDropShadow dx="0" dy="5" stdDeviation="8" flood-color="#00000030"/>
+    </filter>
+  </defs>
+
+  <!-- Sombra -->
+  <ellipse cx="152" cy="212" rx="100" ry="195" fill="#00000018" filter="url(#shadow)"/>
+
+  <!-- ===== CASCO ===== -->
+  <path d="
+    M 150 14
+    C 185 14, 228 55, 235 110
+    L 242 295
+    C 242 355, 225 395, 150 405
+    C 75 395, 58 355, 58 295
+    L 65 110
+    C 72 55, 115 14, 150 14 Z
+  " fill="url(#hullGrad)"/>
+
+  <!-- ===== DECK ===== -->
+  <path d="
+    M 150 26
+    C 180 26, 216 63, 222 112
+    L 228 292
+    C 228 348, 213 385, 150 393
+    C 87 385, 72 348, 72 292
+    L 78 112
+    C 84 63, 120 26, 150 26 Z
+  " fill="url(#deckGrad)"/>
+
+  <!-- Detalhe proa (V) -->
+  <path d="M 150 26 L 135 75 L 150 68 L 165 75 Z" fill="#c4ae90"/>
+
+  <!-- ===== CABINE ===== -->
+  <rect x="100" y="130" width="100" height="110" rx="12"
+        fill="url(#cabinGrad)" stroke="#6a9bbf" stroke-width="2"/>
+
+  <!-- Janelas da cabine (simplificadas - 2 grandes) -->
+  <rect x="110" y="142" width="34" height="22" rx="5"
+        fill="#daeeff" stroke="#5a8daf" stroke-width="1.5"/>
+  <rect x="156" y="142" width="34" height="22" rx="5"
+        fill="#daeeff" stroke="#5a8daf" stroke-width="1.5"/>
+
+  <!-- Linha parabrisa -->
+  <line x1="100" y1="170" x2="200" y2="170" stroke="#5a8daf" stroke-width="1.5" stroke-opacity="0.5"/>
+
+  <!-- Janelas traseiras cabine -->
+  <rect x="110" y="180" width="34" height="18" rx="5"
+        fill="#b8d8f0" stroke="#5a8daf" stroke-width="1.5"/>
+  <rect x="156" y="180" width="34" height="18" rx="5"
+        fill="#b8d8f0" stroke="#5a8daf" stroke-width="1.5"/>
+
+  <!-- ===== COCKPIT ===== -->
+  <path d="
+    M 104 255
+    L 104 308
+    C 104 328, 118 342, 150 345
+    C 182 342, 196 328, 196 308
+    L 196 255 Z
+  " fill="#c8ae8e" rx="8"/>
+
+  <!-- Banco traseiro cockpit -->
+  <path d="
+    M 108 305 L 192 305 L 192 318
+    C 192 328, 178 336, 150 337
+    C 122 336, 108 328, 108 318 Z
+  " fill="#a8906e"/>
+
+  <!-- Banco frontal cockpit -->
+  <rect x="112" y="258" width="76" height="14" rx="5" fill="#a8906e"/>
+
+  <!-- ===== ESCOTILHA PROA ===== -->
+  <ellipse cx="150" cy="96" rx="22" ry="26"
+           fill="#9bbdd6" stroke="#6a9bbf" stroke-width="2"/>
+  <ellipse cx="150" cy="96" rx="13" ry="16" fill="#7aaec9"/>
+
+  <!-- ===== FAIXA DECORATIVA VERMELHA ===== -->
+  <path d="M 72 185 L 68 220 L 72 255" fill="none" stroke="#e74c3c" stroke-width="3.5" stroke-linecap="round"/>
+  <path d="M 228 185 L 232 220 L 228 255" fill="none" stroke="#e74c3c" stroke-width="3.5" stroke-linecap="round"/>
+
+  <!-- ===== CORRIMÕES ===== -->
+  <line x1="88" y1="100" x2="88" y2="345" stroke="#ffffff" stroke-width="1.5" stroke-opacity="0.4" stroke-dasharray="5,4"/>
+  <line x1="212" y1="100" x2="212" y2="345" stroke="#ffffff" stroke-width="1.5" stroke-opacity="0.4" stroke-dasharray="5,4"/>
+
+  <!-- ===== PLATAFORMA DE POPA ===== -->
+  <path d="
+    M 96 358 L 204 358
+    L 208 378
+    C 208 390, 186 400, 150 400
+    C 114 400, 92 390, 92 378 Z
+  " fill="#c4ae90" stroke="#aaa080" stroke-width="1"/>
+
+  <!-- ===== MOTORES ===== -->
+  <rect x="92" y="370" width="22" height="24" rx="5" fill="#2c3e50" stroke="#1a252f" stroke-width="1.5"/>
+  <rect x="186" y="370" width="22" height="24" rx="5" fill="#2c3e50" stroke="#1a252f" stroke-width="1.5"/>
+
+  <!-- Detalhe motor -->
+  <rect x="97" y="376" width="12" height="12" rx="3" fill="#3d5166"/>
+  <rect x="191" y="376" width="12" height="12" rx="3" fill="#3d5166"/>
+
+  <!-- Ponto de antena/GPS -->
+  <circle cx="150" cy="140" r="5" fill="#e74c3c" stroke="#c0392b" stroke-width="1.5"/>
+  <circle cx="150" cy="140" r="2.5" fill="#ffffff"/>
+</svg>
