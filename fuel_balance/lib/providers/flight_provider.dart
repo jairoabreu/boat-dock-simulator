@@ -30,9 +30,11 @@ class FlightProvider extends ChangeNotifier {
   // Active flight state
   int? _flightId;
   DateTime? _startTime;
-  DateTime? _lastEventTime;
   double _totalConsumedAtLastSwitch = 0.0;
   double _totalConsumedNow = 0.0;
+  // Consumo acumulado tick-a-tick desde a última troca confirmada.
+  // Cresce 1 seg × fuelFlow_atual a cada tick — o passado não muda quando o slider move.
+  double _accumulatedConsumed = 0.0;
   final List<SwitchRecord> _switchRecords = [];
   Timer? _ticker;
   Duration _elapsed = Duration.zero;
@@ -49,12 +51,8 @@ class FlightProvider extends ChangeNotifier {
   double get fuelFlowMin => selectedAircraft?.fuelFlowMin ?? 5.0;
   double get fuelFlowMax => selectedAircraft?.fuelFlowMax ?? 50.0;
 
-  // Real-time estimation since the last event (start or switch)
-  double get estimatedConsumedSinceLastEvent {
-    if (fuelFlow <= 0 || _lastEventTime == null) return 0;
-    final secs = DateTime.now().difference(_lastEventTime!).inSeconds;
-    return (fuelFlow / 3600) * secs;
-  }
+  // Consumo estimado desde a última troca confirmada (acumulado tick a tick)
+  double get estimatedConsumedSinceLastEvent => _accumulatedConsumed;
 
   double get estimatedActiveTankRemaining =>
       (activeTank.remaining - estimatedConsumedSinceLastEvent)
@@ -119,10 +117,10 @@ class FlightProvider extends ChangeNotifier {
 
   Future<void> startFlight() async {
     _startTime = DateTime.now();
-    _lastEventTime = _startTime;
     _elapsed = Duration.zero;
     _totalConsumedAtLastSwitch = 0.0;
     _totalConsumedNow = 0.0;
+    _accumulatedConsumed = 0.0;
     _switchRecords.clear();
 
     for (final t in tanks) {
@@ -149,6 +147,10 @@ class FlightProvider extends ChangeNotifier {
 
   void _tick(Timer _) {
     _elapsed = DateTime.now().difference(_startTime!);
+    // Acumula 1 segundo de consumo ao fuelFlow atual — o passado não é reescrito
+    if (fuelFlow > 0) {
+      _accumulatedConsumed += fuelFlow / 3600;
+    }
     _checkNotifications();
     notifyListeners();
   }
@@ -197,9 +199,8 @@ class FlightProvider extends ChangeNotifier {
     tanks[activeTankIndex].consumed += consumedSinceLast;
     _totalConsumedNow = totalConsumedInput;
     _totalConsumedAtLastSwitch = totalConsumedInput;
-
-    // Reset real-time estimation baseline from this confirmed switch point
-    _lastEventTime = switchTime;
+    // Zera o acumulador — próxima estimativa parte do zero a partir daqui
+    _accumulatedConsumed = 0.0;
 
     final record = SwitchRecord(
       timestamp: switchTime,
@@ -298,7 +299,7 @@ class FlightProvider extends ChangeNotifier {
     phase = FlightPhase.idle;
     _flightId = null;
     _startTime = null;
-    _lastEventTime = null;
+    _accumulatedConsumed = 0.0;
     _elapsed = Duration.zero;
     _totalConsumedNow = 0;
     _totalConsumedAtLastSwitch = 0;
