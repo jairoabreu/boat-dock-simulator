@@ -65,6 +65,9 @@ class FlightProvider extends ChangeNotifier {
     return (estimatedActiveTankRemaining - inactiveTank.remaining).abs();
   }
 
+  /// Total consumido no voo incluindo o consumo estimado desde a última troca
+  double get estimatedTotalConsumed => _totalConsumedNow + estimatedConsumedSinceLastEvent;
+
   // Estimation (only when fuelFlow > 0)
   Duration? get estimatedTimeToSwitch {
     if (fuelFlow <= 0) return null;

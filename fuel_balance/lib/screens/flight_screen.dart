@@ -36,7 +36,7 @@ class _FlightScreenState extends State<FlightScreen> {
 
   Future<void> _showSwitchDialog(FlightProvider p) async {
     final totalCtrl = TextEditingController(
-      text: p.totalConsumed > 0 ? p.totalConsumed.toStringAsFixed(1) : '',
+      text: p.estimatedTotalConsumed.toStringAsFixed(1),
     );
     DateTime switchTime = DateTime.now();
     bool editTime = false;
@@ -208,7 +208,7 @@ class _FlightScreenState extends State<FlightScreen> {
 
   Future<void> _showEndDialog(FlightProvider p) async {
     final totalCtrl = TextEditingController(
-      text: p.totalConsumed > 0 ? p.totalConsumed.toStringAsFixed(1) : '',
+      text: p.estimatedTotalConsumed.toStringAsFixed(1),
     );
 
     await showDialog(
@@ -419,7 +419,7 @@ class _FlightScreenState extends State<FlightScreen> {
                       children: [
                         _StatBox(
                           label: 'Total consumido',
-                          value: '${p.totalConsumed.toStringAsFixed(1)} gal',
+                          value: '~${p.estimatedTotalConsumed.toStringAsFixed(1)} gal',
                         ),
                         const SizedBox(width: 10),
                         _StatBox(
