@@ -8,6 +8,8 @@ class NotificationService {
 
   static const _channelId = 'fuel_balance';
   static const _channelName = 'Fuel Balance';
+  static const _channelIdCritical = 'fuel_balance_critical';
+  static const _channelNameCritical = 'Fuel Balance — Crítico';
 
   Future<void> init() async {
     if (_initialized) return;
@@ -54,12 +56,37 @@ class NotificationService {
         ),
       );
 
+  NotificationDetails get _criticalDetails => const NotificationDetails(
+        android: AndroidNotificationDetails(
+          _channelIdCritical,
+          _channelNameCritical,
+          importance: Importance.max,
+          priority: Priority.max,
+          playSound: true,
+          enableVibration: true,
+          fullScreenIntent: true,
+        ),
+        iOS: DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+        ),
+      );
+
   Future<void> showImmediate({
     required int id,
     required String title,
     required String body,
   }) async {
     await _plugin.show(id, title, body, _details);
+  }
+
+  Future<void> showCritical({
+    required int id,
+    required String title,
+    required String body,
+  }) async {
+    await _plugin.show(id, title, body, _criticalDetails);
   }
 
   Future<void> scheduleIn({

@@ -1,6 +1,7 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import '../models/flight.dart';
+import '../models/aircraft.dart';
 
 class StorageService {
   static Database? _db;
@@ -14,7 +15,7 @@ class StorageService {
     final path = join(await getDatabasesPath(), 'fuel_balance.db');
     return openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE flights (
@@ -53,9 +54,37 @@ class StorageService {
             value TEXT NOT NULL
           )
         ''');
+        await db.execute('''
+          CREATE TABLE aircraft (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            prefix TEXT NOT NULL,
+            fuelFlowMin REAL NOT NULL,
+            fuelFlowMax REAL NOT NULL,
+            maxTankDiff REAL NOT NULL,
+            tankCapacity REAL NOT NULL
+          )
+        ''');
+      },
+      onUpgrade: (db, oldVersion, newVersion) async {
+        if (oldVersion < 2) {
+          await db.execute('''
+            CREATE TABLE aircraft (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              name TEXT NOT NULL,
+              prefix TEXT NOT NULL,
+              fuelFlowMin REAL NOT NULL,
+              fuelFlowMax REAL NOT NULL,
+              maxTankDiff REAL NOT NULL,
+              tankCapacity REAL NOT NULL
+            )
+          ''');
+        }
       },
     );
   }
+
+  // --- Flights ---
 
   Future<int> insertFlight(FlightLog flight) async {
     final database = await db;
@@ -98,6 +127,8 @@ class StorageService {
     return result;
   }
 
+  // --- Prefs ---
+
   Future<void> savePref(String key, String value) async {
     final database = await db;
     await database.insert(
@@ -116,5 +147,37 @@ class StorageService {
     );
     if (rows.isEmpty) return null;
     return rows.first['value'] as String;
+  }
+
+  // --- Aircraft ---
+
+  Future<int> insertAircraft(Aircraft aircraft) async {
+    final database = await db;
+    return database.insert('aircraft', aircraft.toMap());
+  }
+
+  Future<void> updateAircraft(Aircraft aircraft) async {
+    final database = await db;
+    await database.update(
+      'aircraft',
+      aircraft.toMap(),
+      where: 'id = ?',
+      whereArgs: [aircraft.id],
+    );
+  }
+
+  Future<void> deleteAircraft(int id) async {
+    final database = await db;
+    await database.delete(
+      'aircraft',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  Future<List<Aircraft>> getAircrafts() async {
+    final database = await db;
+    final rows = await database.query('aircraft', orderBy: 'name ASC');
+    return rows.map(Aircraft.fromMap).toList();
   }
 }

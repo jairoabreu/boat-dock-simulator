@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../models/flight.dart';
+import '../models/aircraft.dart';
 import '../services/storage_service.dart';
 import '../services/notification_service.dart';
 
@@ -23,9 +24,13 @@ class FlightProvider extends ChangeNotifier {
   double switchThreshold = 10.0;
   int activeTankIndex = 0;
 
+  // Aircraft
+  Aircraft? selectedAircraft;
+
   // Active flight state
   int? _flightId;
   DateTime? _startTime;
+  DateTime? _lastEventTime;
   double _totalConsumedAtLastSwitch = 0.0;
   double _totalConsumedNow = 0.0;
   final List<SwitchRecord> _switchRecords = [];
@@ -40,22 +45,42 @@ class FlightProvider extends ChangeNotifier {
   double get tankDiff => (tanks[0].remaining - tanks[1].remaining).abs();
   List<SwitchRecord> get switchRecords => List.unmodifiable(_switchRecords);
 
+  // Aircraft-derived limits
+  double get fuelFlowMin => selectedAircraft?.fuelFlowMin ?? 5.0;
+  double get fuelFlowMax => selectedAircraft?.fuelFlowMax ?? 50.0;
+
+  // Real-time estimation since the last event (start or switch)
+  double get estimatedConsumedSinceLastEvent {
+    if (fuelFlow <= 0 || _lastEventTime == null) return 0;
+    final secs = DateTime.now().difference(_lastEventTime!).inSeconds;
+    return (fuelFlow / 3600) * secs;
+  }
+
+  double get estimatedActiveTankRemaining =>
+      (activeTank.remaining - estimatedConsumedSinceLastEvent)
+          .clamp(0.0, double.infinity);
+
+  double get estimatedTankDiff {
+    if (fuelFlow <= 0) return tankDiff;
+    return (estimatedActiveTankRemaining - inactiveTank.remaining).abs();
+  }
+
   // Estimation (only when fuelFlow > 0)
   Duration? get estimatedTimeToSwitch {
     if (fuelFlow <= 0) return null;
-    final diff = tankDiff;
-    final active = activeTank;
-    final inactive = inactiveTank;
+    final diff = estimatedTankDiff;
+    final active = estimatedActiveTankRemaining;
+    final inactive = inactiveTank.remaining;
     final double minutesToThreshold;
-    if (active.remaining > inactive.remaining) {
+    if (active > inactive) {
       // Active is heavier — consuming it reduces imbalance
       final gapToClose = diff - switchThreshold;
       if (gapToClose <= 0) return Duration.zero;
       minutesToThreshold = gapToClose / (fuelFlow / 60);
     } else {
       // Active is lighter — consuming it increases imbalance
-      minutesToThreshold = (switchThreshold - diff).clamp(0, double.infinity) /
-          (fuelFlow / 60);
+      minutesToThreshold =
+          (switchThreshold - diff).clamp(0, double.infinity) / (fuelFlow / 60);
     }
     return Duration(seconds: (minutesToThreshold * 60).round());
   }
@@ -68,12 +93,30 @@ class FlightProvider extends ChangeNotifier {
 
   Duration? get estimatedActiveTankEmpty {
     if (fuelFlow <= 0) return null;
-    final minutes = activeTank.remaining / (fuelFlow / 60);
+    final minutes = estimatedActiveTankRemaining / (fuelFlow / 60);
     return Duration(seconds: (minutes * 60).round());
   }
 
+  // --- Aircraft selection ---
+
+  void selectAircraft(Aircraft a) {
+    selectedAircraft = a;
+    switchThreshold = a.maxTankDiff;
+    tanks[0] = tanks[0].copyWith(capacity: a.tankCapacity);
+    tanks[1] = tanks[1].copyWith(capacity: a.tankCapacity);
+    notifyListeners();
+  }
+
+  void clearAircraft() {
+    selectedAircraft = null;
+    notifyListeners();
+  }
+
+  // --- Flight lifecycle ---
+
   Future<void> startFlight() async {
     _startTime = DateTime.now();
+    _lastEventTime = _startTime;
     _elapsed = Duration.zero;
     _totalConsumedAtLastSwitch = 0.0;
     _totalConsumedNow = 0.0;
@@ -111,20 +154,24 @@ class FlightProvider extends ChangeNotifier {
   bool _warningNotified = false;
 
   void _checkNotifications() {
-    if (tankDiff >= switchThreshold && !_thresholdNotified) {
+    final diff = estimatedTankDiff;
+    if (diff >= switchThreshold && !_thresholdNotified) {
       _thresholdNotified = true;
-      _notif.showImmediate(
+      _notif.showCritical(
         id: kNotifThreshold,
         title: 'Desequilíbrio de combustível',
         body:
-            'Diferença de ${tankDiff.toStringAsFixed(1)} gal. Considere trocar o tanque.',
+            'Diferença de ${diff.toStringAsFixed(1)} gal. Considere trocar o tanque.',
       );
-    } else if (tankDiff < switchThreshold * 0.8) {
+    } else if (diff < switchThreshold * 0.8) {
       _thresholdNotified = false;
     }
 
     final est = estimatedTimeToSwitch;
-    if (est != null && est.inMinutes <= 5 && est.inMinutes >= 0 && !_warningNotified) {
+    if (est != null &&
+        est.inMinutes <= 5 &&
+        est.inMinutes >= 0 &&
+        !_warningNotified) {
       _warningNotified = true;
       _notif.showImmediate(
         id: kNotifSwitchWarning,
@@ -147,6 +194,9 @@ class FlightProvider extends ChangeNotifier {
     tanks[activeTankIndex].consumed += consumedSinceLast;
     _totalConsumedNow = totalConsumedInput;
     _totalConsumedAtLastSwitch = totalConsumedInput;
+
+    // Reset real-time estimation baseline from this confirmed switch point
+    _lastEventTime = switchTime;
 
     final record = SwitchRecord(
       timestamp: switchTime,
@@ -222,12 +272,14 @@ class FlightProvider extends ChangeNotifier {
     tanks[0] = TankConfig(
       name: t0Name,
       capacity: double.tryParse(await _storage.getPref('tank0Capacity') ?? '') ?? 50,
-      initialFuel: double.tryParse(await _storage.getPref('tank0Initial') ?? '') ?? 50,
+      initialFuel:
+          double.tryParse(await _storage.getPref('tank0Initial') ?? '') ?? 50,
     );
     tanks[1] = TankConfig(
       name: await _storage.getPref('tank1Name') ?? 'Direito',
       capacity: double.tryParse(await _storage.getPref('tank1Capacity') ?? '') ?? 50,
-      initialFuel: double.tryParse(await _storage.getPref('tank1Initial') ?? '') ?? 50,
+      initialFuel:
+          double.tryParse(await _storage.getPref('tank1Initial') ?? '') ?? 50,
     );
     fuelFlow = double.tryParse(await _storage.getPref('fuelFlow') ?? '') ?? 0;
     switchThreshold =
@@ -243,6 +295,7 @@ class FlightProvider extends ChangeNotifier {
     phase = FlightPhase.idle;
     _flightId = null;
     _startTime = null;
+    _lastEventTime = null;
     _elapsed = Duration.zero;
     _totalConsumedNow = 0;
     _totalConsumedAtLastSwitch = 0;

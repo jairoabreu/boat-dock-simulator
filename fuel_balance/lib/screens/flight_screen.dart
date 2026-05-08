@@ -69,7 +69,8 @@ class _FlightScreenState extends State<FlightScreen> {
                 TextField(
                   controller: totalCtrl,
                   autofocus: true,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
                   inputFormatters: [
                     FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
                   ],
@@ -275,8 +276,7 @@ class _FlightScreenState extends State<FlightScreen> {
               Navigator.pop(context);
               p.endFlight(totalConsumedFinal: val).then((_) {
                 if (mounted) {
-                  Navigator.pushNamedAndRemoveUntil(
-                      context, '/', (_) => false);
+                  Navigator.pushNamedAndRemoveUntil(context, '/', (_) => false);
                 }
               });
             },
@@ -331,7 +331,8 @@ class _FlightScreenState extends State<FlightScreen> {
       ),
       body: Consumer<FlightProvider>(
         builder: (context, p, child) {
-          final diff = p.tankDiff;
+          // Use estimated diff for live visual feedback
+          final diff = p.estimatedTankDiff;
           final overThreshold = diff >= p.switchThreshold;
 
           return Column(
@@ -342,7 +343,8 @@ class _FlightScreenState extends State<FlightScreen> {
                 color: overThreshold
                     ? const Color(0xFFD50000).withValues(alpha: 0.15)
                     : const Color(0xFF071220),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -385,7 +387,7 @@ class _FlightScreenState extends State<FlightScreen> {
                 child: ListView(
                   padding: const EdgeInsets.all(16),
                   children: [
-                    // Tank gauges
+                    // Tank gauges — active tank shows real-time estimated remaining
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -393,6 +395,9 @@ class _FlightScreenState extends State<FlightScreen> {
                           child: TankGauge(
                             tank: p.tanks[0],
                             isActive: p.activeTankIndex == 0,
+                            estimatedRemaining: p.activeTankIndex == 0
+                                ? p.estimatedActiveTankRemaining
+                                : null,
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -400,6 +405,9 @@ class _FlightScreenState extends State<FlightScreen> {
                           child: TankGauge(
                             tank: p.tanks[1],
                             isActive: p.activeTankIndex == 1,
+                            estimatedRemaining: p.activeTankIndex == 1
+                                ? p.estimatedActiveTankRemaining
+                                : null,
                           ),
                         ),
                       ],
@@ -423,7 +431,7 @@ class _FlightScreenState extends State<FlightScreen> {
                     ),
                     const SizedBox(height: 10),
 
-                    // Fuel flow + estimation
+                    // Fuel flow slider + estimation
                     _FuelFlowCard(provider: p),
                     const SizedBox(height: 20),
 
@@ -456,8 +464,7 @@ class _FlightScreenState extends State<FlightScreen> {
                     // Switch log
                     const _SectionLabel('Histórico de Trocas'),
                     const SizedBox(height: 8),
-                    SwitchLog(
-                        records: p.switchRecords, tanks: p.tanks),
+                    SwitchLog(records: p.switchRecords, tanks: p.tanks),
                     const SizedBox(height: 16),
                   ],
                 ),
@@ -469,6 +476,138 @@ class _FlightScreenState extends State<FlightScreen> {
     );
   }
 }
+
+// ---- Fuel Flow Card with Slider ----
+
+class _FuelFlowCard extends StatelessWidget {
+  final FlightProvider provider;
+  const _FuelFlowCard({required this.provider});
+
+  String _fmtDuration(Duration d) {
+    if (d.isNegative || d == Duration.zero) return 'agora';
+    final h = d.inHours;
+    final m = d.inMinutes % 60;
+    if (h > 0) return '${h}h${m.toString().padLeft(2, '0')}min';
+    return '${m}min';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final p = provider;
+    final flowMin = p.fuelFlowMin;
+    final flowMax = p.fuelFlowMax;
+    // Clamp to avoid RangeError if fuelFlow is 0 or outside bounds
+    final currentFlow = p.fuelFlow <= 0
+        ? flowMin
+        : p.fuelFlow.clamp(flowMin, flowMax);
+    // 0.5 GPH steps
+    final divisions = ((flowMax - flowMin) * 2).round();
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0A1A2E),
+        border: Border.all(color: const Color(0xFF1E3A5F)),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const _SectionLabel('Fuel Flow'),
+          const SizedBox(height: 10),
+
+          // Current value display
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                currentFlow.toStringAsFixed(1),
+                style: const TextStyle(
+                  color: Color(0xFFCCE3F5),
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'monospace',
+                ),
+              ),
+              const SizedBox(width: 6),
+              const Text(
+                'GPH',
+                style: TextStyle(color: Color(0xFF8BA7C0), fontSize: 16),
+              ),
+            ],
+          ),
+
+          // Slider
+          SliderTheme(
+            data: SliderTheme.of(context).copyWith(
+              activeTrackColor: const Color(0xFF00B0FF),
+              inactiveTrackColor: const Color(0xFF1E3A5F),
+              thumbColor: const Color(0xFF00B0FF),
+              overlayColor: const Color(0xFF00B0FF).withValues(alpha: 0.15),
+              valueIndicatorColor: const Color(0xFF0A1A2E),
+              valueIndicatorTextStyle: const TextStyle(
+                  color: Color(0xFFCCE3F5), fontWeight: FontWeight.bold),
+              trackHeight: 4,
+            ),
+            child: Slider(
+              min: flowMin,
+              max: flowMax,
+              divisions: divisions > 0 ? divisions : null,
+              value: currentFlow,
+              label: '${currentFlow.toStringAsFixed(1)} GPH',
+              onChanged: (v) => p.updateFuelFlow(v),
+            ),
+          ),
+
+          // Min / Max labels
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  '${flowMin.toStringAsFixed(0)} GPH',
+                  style:
+                      const TextStyle(color: Color(0xFF5A7A9A), fontSize: 11),
+                ),
+                Text(
+                  '${flowMax.toStringAsFixed(0)} GPH',
+                  style:
+                      const TextStyle(color: Color(0xFF5A7A9A), fontSize: 11),
+                ),
+              ],
+            ),
+          ),
+
+          // Estimation rows (only when fuelFlow > 0)
+          if (p.fuelFlow > 0) ...[
+            const SizedBox(height: 12),
+            _EstRow(
+              icon: Icons.swap_horiz,
+              label: 'Próxima troca',
+              value: p.estimatedSwitchTime != null
+                  ? DateFormat('HH:mm').format(p.estimatedSwitchTime!)
+                  : '--',
+              sub: p.estimatedTimeToSwitch != null
+                  ? '(em ${_fmtDuration(p.estimatedTimeToSwitch!)})'
+                  : '',
+            ),
+            const SizedBox(height: 6),
+            _EstRow(
+              icon: Icons.hourglass_bottom,
+              label: '${p.activeTank.name} esvazia em',
+              value: p.estimatedActiveTankEmpty != null
+                  ? _fmtDuration(p.estimatedActiveTankEmpty!)
+                  : '--',
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+// ---- Shared widgets ----
 
 class _StatBox extends StatelessWidget {
   final String label;
@@ -519,163 +658,6 @@ class _StatBox extends StatelessWidget {
   }
 }
 
-class _FuelFlowCard extends StatefulWidget {
-  final FlightProvider provider;
-  const _FuelFlowCard({required this.provider});
-
-  @override
-  State<_FuelFlowCard> createState() => _FuelFlowCardState();
-}
-
-class _FuelFlowCardState extends State<_FuelFlowCard> {
-  late TextEditingController _ctrl;
-  bool _editing = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _ctrl = TextEditingController(
-        text: widget.provider.fuelFlow > 0
-            ? widget.provider.fuelFlow.toString()
-            : '');
-  }
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  String _fmtDuration(Duration d) {
-    if (d.isNegative || d == Duration.zero) return 'agora';
-    final h = d.inHours;
-    final m = d.inMinutes % 60;
-    if (h > 0) return '${h}h${m.toString().padLeft(2, '0')}min';
-    return '${m}min';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final p = widget.provider;
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: const Color(0xFF0A1A2E),
-        border: Border.all(color: const Color(0xFF1E3A5F)),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const _SectionLabel('Fuel Flow'),
-              const Spacer(),
-              if (!_editing)
-                TextButton(
-                  onPressed: () => setState(() => _editing = true),
-                  style: TextButton.styleFrom(
-                    minimumSize: Size.zero,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 4),
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  ),
-                  child: const Text('Editar',
-                      style: TextStyle(
-                          color: Color(0xFF00B0FF), fontSize: 13)),
-                )
-              else
-                TextButton(
-                  onPressed: () {
-                    final v = double.tryParse(_ctrl.text) ?? 0.0;
-                    p.updateFuelFlow(v);
-                    setState(() => _editing = false);
-                  },
-                  style: TextButton.styleFrom(
-                    minimumSize: Size.zero,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 4),
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  ),
-                  child: const Text('Salvar',
-                      style: TextStyle(
-                          color: Color(0xFF00C853), fontSize: 13)),
-                ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          if (_editing)
-            TextField(
-              controller: _ctrl,
-              autofocus: true,
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
-              ],
-              style: const TextStyle(color: Color(0xFFCCE3F5), fontSize: 18),
-              decoration: InputDecoration(
-                filled: true,
-                fillColor: const Color(0xFF071220),
-                border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8)),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: Color(0xFF1E3A5F)),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide:
-                      const BorderSide(color: Color(0xFF00B0FF), width: 1.5),
-                ),
-                suffixText: 'GPH',
-                suffixStyle:
-                    const TextStyle(color: Color(0xFF5A7A9A)),
-                isDense: true,
-                contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 12, vertical: 10),
-              ),
-            )
-          else if (p.fuelFlow <= 0)
-            const Text(
-              'Não configurado — estimativas desativadas',
-              style: TextStyle(color: Color(0xFF5A7A9A), fontSize: 13),
-            )
-          else ...[
-            Text(
-              '${p.fuelFlow.toStringAsFixed(1)} GPH',
-              style: const TextStyle(
-                color: Color(0xFFCCE3F5),
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 10),
-            _EstRow(
-              icon: Icons.swap_horiz,
-              label: 'Próxima troca',
-              value: p.estimatedSwitchTime != null
-                  ? DateFormat('HH:mm').format(p.estimatedSwitchTime!)
-                  : '--',
-              sub: p.estimatedTimeToSwitch != null
-                  ? '(em ${_fmtDuration(p.estimatedTimeToSwitch!)})'
-                  : '',
-            ),
-            const SizedBox(height: 6),
-            _EstRow(
-              icon: Icons.hourglass_bottom,
-              label: '${p.activeTank.name} esvazia em',
-              value: p.estimatedActiveTankEmpty != null
-                  ? _fmtDuration(p.estimatedActiveTankEmpty!)
-                  : '--',
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
 class _EstRow extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -696,8 +678,7 @@ class _EstRow extends StatelessWidget {
         Icon(icon, color: const Color(0xFF5A7A9A), size: 16),
         const SizedBox(width: 6),
         Text(label,
-            style:
-                const TextStyle(color: Color(0xFF8BA7C0), fontSize: 13)),
+            style: const TextStyle(color: Color(0xFF8BA7C0), fontSize: 13)),
         const SizedBox(width: 8),
         Text(
           value,
@@ -710,8 +691,7 @@ class _EstRow extends StatelessWidget {
         if (sub.isNotEmpty) ...[
           const SizedBox(width: 4),
           Text(sub,
-              style:
-                  const TextStyle(color: Color(0xFF5A7A9A), fontSize: 12)),
+              style: const TextStyle(color: Color(0xFF5A7A9A), fontSize: 12)),
         ],
       ],
     );

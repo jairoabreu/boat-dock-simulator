@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../providers/flight_provider.dart';
 import '../models/flight.dart';
+import '../models/aircraft.dart';
+import '../services/storage_service.dart';
 import 'flight_screen.dart';
 
 class SetupScreen extends StatefulWidget {
@@ -14,6 +16,7 @@ class SetupScreen extends StatefulWidget {
 
 class _SetupScreenState extends State<SetupScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _storage = StorageService();
 
   late TextEditingController _t0Name;
   late TextEditingController _t0Cap;
@@ -24,6 +27,9 @@ class _SetupScreenState extends State<SetupScreen> {
   late TextEditingController _fuelFlow;
   late TextEditingController _threshold;
   late int _activeTank;
+
+  List<Aircraft> _aircrafts = [];
+  Aircraft? _selectedAircraft;
 
   @override
   void initState() {
@@ -39,6 +45,19 @@ class _SetupScreenState extends State<SetupScreen> {
         text: p.fuelFlow > 0 ? p.fuelFlow.toString() : '');
     _threshold = TextEditingController(text: p.switchThreshold.toString());
     _activeTank = p.activeTankIndex;
+    _selectedAircraft = p.selectedAircraft;
+    _loadAircrafts();
+  }
+
+  Future<void> _loadAircrafts() async {
+    final list = await _storage.getAircrafts();
+    if (!mounted) return;
+    setState(() => _aircrafts = list);
+    // Restore the previously selected aircraft object by id
+    if (_selectedAircraft != null) {
+      final match = list.where((a) => a.id == _selectedAircraft!.id);
+      setState(() => _selectedAircraft = match.isNotEmpty ? match.first : null);
+    }
   }
 
   @override
@@ -49,6 +68,19 @@ class _SetupScreenState extends State<SetupScreen> {
       c.dispose();
     }
     super.dispose();
+  }
+
+  void _applyAircraft(Aircraft? aircraft) {
+    final p = context.read<FlightProvider>();
+    setState(() => _selectedAircraft = aircraft);
+    if (aircraft != null) {
+      p.selectAircraft(aircraft);
+      _t0Cap.text = aircraft.tankCapacity.toStringAsFixed(1);
+      _t1Cap.text = aircraft.tankCapacity.toStringAsFixed(1);
+      _threshold.text = aircraft.maxTankDiff.toStringAsFixed(1);
+    } else {
+      p.clearAircraft();
+    }
   }
 
   void _start() {
@@ -65,6 +97,8 @@ class _SetupScreenState extends State<SetupScreen> {
       capacity: double.parse(_t1Cap.text),
       initialFuel: double.parse(_t1Init.text),
     );
+    // fuelFlow may have been pre-filled or left blank; if blank it starts as 0
+    // and the pilot adjusts with the slider in-flight
     p.fuelFlow = double.tryParse(_fuelFlow.text) ?? 0.0;
     p.switchThreshold = double.parse(_threshold.text);
     p.activeTankIndex = _activeTank;
@@ -92,8 +126,7 @@ class _SetupScreenState extends State<SetupScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.history, color: Color(0xFF8BA7C0)),
-            onPressed: () =>
-                Navigator.pushNamed(context, '/history'),
+            onPressed: () => Navigator.pushNamed(context, '/history'),
             tooltip: 'Histórico',
           ),
         ],
@@ -103,6 +136,73 @@ class _SetupScreenState extends State<SetupScreen> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            // -- Aircraft picker --
+            _SectionHeader('Aeronave'),
+            const SizedBox(height: 8),
+            _Card(
+              child: Row(
+                children: [
+                  Expanded(
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<Aircraft?>(
+                        value: _selectedAircraft,
+                        dropdownColor: const Color(0xFF0A1A2E),
+                        isExpanded: true,
+                        hint: const Text(
+                          'Nenhuma',
+                          style: TextStyle(color: Color(0xFF5A7A9A), fontSize: 14),
+                        ),
+                        style: const TextStyle(
+                            color: Color(0xFFCCE3F5), fontSize: 14),
+                        items: [
+                          const DropdownMenuItem<Aircraft?>(
+                            value: null,
+                            child: Text(
+                              'Nenhuma',
+                              style: TextStyle(
+                                  color: Color(0xFF5A7A9A), fontSize: 14),
+                            ),
+                          ),
+                          ..._aircrafts.map(
+                            (a) => DropdownMenuItem<Aircraft?>(
+                              value: a,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(a.name,
+                                      style: const TextStyle(
+                                          color: Color(0xFFCCE3F5),
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600)),
+                                  Text(a.prefix,
+                                      style: const TextStyle(
+                                          color: Color(0xFF8BA7C0),
+                                          fontSize: 11)),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                        onChanged: _applyAircraft,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () async {
+                      await Navigator.pushNamed(context, '/aircraft');
+                      _loadAircrafts();
+                    },
+                    icon: const Icon(Icons.edit_note,
+                        color: Color(0xFF00B0FF), size: 22),
+                    tooltip: 'Gerenciar aeronaves',
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // -- Tanks --
             _SectionHeader('Tanques'),
             const SizedBox(height: 8),
             Row(
@@ -121,6 +221,8 @@ class _SetupScreenState extends State<SetupScreen> {
               ],
             ),
             const SizedBox(height: 20),
+
+            // -- Active tank picker --
             _SectionHeader('Tanque ativo ao decolar'),
             const SizedBox(height: 8),
             Row(
@@ -132,7 +234,8 @@ class _SetupScreenState extends State<SetupScreen> {
                     onTap: () => setState(() => _activeTank = i),
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 200),
-                      margin: EdgeInsets.only(right: i == 0 ? 6 : 0, left: i == 1 ? 6 : 0),
+                      margin: EdgeInsets.only(
+                          right: i == 0 ? 6 : 0, left: i == 1 ? 6 : 0),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       decoration: BoxDecoration(
                         color: selected
@@ -164,14 +267,16 @@ class _SetupScreenState extends State<SetupScreen> {
               }).toList(),
             ),
             const SizedBox(height: 20),
+
+            // -- Flight params --
             _SectionHeader('Parâmetros do Voo'),
             const SizedBox(height: 8),
             _Card(
               child: Column(
                 children: [
                   _NumField(
-                    label: 'Fuel Flow (GPH)',
-                    hint: 'Opcional',
+                    label: 'Fuel Flow inicial (GPH)',
+                    hint: 'Opcional — ajustável em voo',
                     ctrl: _fuelFlow,
                     required: false,
                   ),
@@ -192,7 +297,10 @@ class _SetupScreenState extends State<SetupScreen> {
                 icon: const Icon(Icons.flight_takeoff, size: 24),
                 label: const Text(
                   'INICIAR VOO',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 1),
+                  style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1),
                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF00C853),

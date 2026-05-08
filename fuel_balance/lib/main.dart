@@ -5,6 +5,7 @@ import 'services/storage_service.dart';
 import 'services/notification_service.dart';
 import 'screens/setup_screen.dart';
 import 'screens/history_screen.dart';
+import 'screens/aircraft_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -67,6 +68,7 @@ class FuelBalanceApp extends StatelessWidget {
       routes: {
         '/': (_) => const SetupScreen(),
         '/history': (_) => const HistoryScreen(),
+        '/aircraft': (_) => const AircraftScreen(),
       },
     );
   }
