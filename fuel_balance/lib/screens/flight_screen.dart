@@ -659,12 +659,8 @@ class _BleStatusBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Hide bar when disconnected and no data
-    if (ble.status == BleStatus.disconnected && ble.lastFf == null) {
-      return const SizedBox.shrink();
-    }
-
     final label = _buildLabel(ble);
+    final isDisconnected = ble.status == BleStatus.disconnected;
 
     return Container(
       height: 36,
@@ -674,10 +670,22 @@ class _BleStatusBar extends StatelessWidget {
         children: [
           _SignalDot(signal: ble.signal, status: ble.status),
           const SizedBox(width: 8),
-          Text(
-            label,
-            style: const TextStyle(color: Color(0xFF8BA7C0), fontSize: 13),
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                color: isDisconnected
+                    ? const Color(0xFF3A5A7A)
+                    : const Color(0xFF8BA7C0),
+                fontSize: 13,
+              ),
+            ),
           ),
+          if (isDisconnected)
+            Text(
+              'Toque 🔵 para conectar',
+              style: const TextStyle(color: Color(0xFF3A5A7A), fontSize: 11),
+            ),
         ],
       ),
     );
@@ -690,7 +698,8 @@ class _BleStatusBar extends StatelessWidget {
       return 'AvidyneFF  ${ble.lastFf!.toStringAsFixed(1)} GPH  Conf: ${ble.lastConfidence ?? 0}%';
     }
     if (ble.signal == SensorSignal.stale) return 'Sensor sem dados recentes';
-    return 'Sensor offline';
+    if (ble.status == BleStatus.connected) return 'Sensor offline';
+    return '● Sensor desconectado';
   }
 }
 
