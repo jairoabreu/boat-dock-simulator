@@ -1,9 +1,12 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import '../providers/flight_provider.dart';
+import '../providers/ble_provider.dart';
+import '../models/ble_reading.dart';
 import '../widgets/tank_gauge.dart';
 import '../widgets/switch_log.dart';
 
@@ -15,14 +18,37 @@ class FlightScreen extends StatefulWidget {
 }
 
 class _FlightScreenState extends State<FlightScreen> {
+  StreamSubscription<BleReading>? _bleSub;
+
   @override
   void initState() {
     super.initState();
     WakelockPlus.enable();
+
+    // Wire BleProvider readings → FlightProvider.onBleReading
+    // Done in post-frame so context.read is available
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final bleProvider = context.read<BleProvider>();
+      final flightProvider = context.read<FlightProvider>();
+
+      _bleSub = bleProvider.readingStream.listen((reading) {
+        flightProvider.onBleReading(reading.espT, reading.ffGph);
+        // Sync active flag
+        flightProvider.setBleActive(bleProvider.isReceivingValidData);
+      });
+
+      // Also keep active flag in sync when signal changes (timer-driven updates)
+      bleProvider.addListener(() {
+        if (mounted) {
+          flightProvider.setBleActive(bleProvider.isReceivingValidData);
+        }
+      });
+    });
   }
 
   @override
   void dispose() {
+    _bleSub?.cancel();
     WakelockPlus.disable();
     super.dispose();
   }
@@ -294,6 +320,138 @@ class _FlightScreenState extends State<FlightScreen> {
     );
   }
 
+  void _showBleBottomSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF0A1A2E),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) => Consumer<BleProvider>(
+        builder: (ctx, ble, child) {
+          final statusLabel = _bleStatusLabel(ble.status);
+          final isConnected = ble.isConnected;
+
+          return Padding(
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Handle bar
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1E3A5F),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'SENSOR BLE',
+                  style: TextStyle(
+                    color: Color(0xFF5A7A9A),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                // Status row
+                Row(
+                  children: [
+                    _SignalDot(signal: ble.signal, status: ble.status),
+                    const SizedBox(width: 10),
+                    Text(
+                      statusLabel,
+                      style: const TextStyle(
+                          color: Color(0xFFCCE3F5), fontSize: 16),
+                    ),
+                  ],
+                ),
+                if (ble.lastFf != null) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    '${ble.lastFf!.toStringAsFixed(1)} GPH  •  Conf: ${ble.lastConfidence ?? 0}%',
+                    style: const TextStyle(
+                        color: Color(0xFF8BA7C0), fontSize: 14),
+                  ),
+                ],
+                const SizedBox(height: 20),
+                // Connect / Disconnect button
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      if (isConnected ||
+                          ble.status == BleStatus.scanning ||
+                          ble.status == BleStatus.connecting) {
+                        ble.disconnect();
+                      } else {
+                        ble.startScan();
+                      }
+                    },
+                    icon: Icon(
+                      isConnected ? Icons.bluetooth_disabled : Icons.bluetooth,
+                    ),
+                    label: Text(
+                      isConnected
+                          ? 'Desconectar'
+                          : (ble.status == BleStatus.scanning ||
+                                  ble.status == BleStatus.connecting)
+                              ? 'Conectando...'
+                              : 'Conectar sensor',
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: isConnected
+                          ? const Color(0xFF1E3A5F)
+                          : const Color(0xFF00B0FF),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10)),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                // Reset OCR vote button
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: isConnected ? () => ble.sendResetVote() : null,
+                    icon: const Icon(Icons.refresh, size: 18),
+                    label: const Text('Reset filtro OCR'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFF8BA7C0),
+                      side: const BorderSide(color: Color(0xFF1E3A5F)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10)),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  String _bleStatusLabel(BleStatus status) {
+    switch (status) {
+      case BleStatus.disconnected:
+        return 'Desconectado';
+      case BleStatus.scanning:
+        return 'Procurando AvidyneFF...';
+      case BleStatus.connecting:
+        return 'Conectando...';
+      case BleStatus.connected:
+        return 'AvidyneFF conectado';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -319,6 +477,20 @@ class _FlightScreenState extends State<FlightScreen> {
           ),
         ),
         actions: [
+          // BLE button
+          Consumer<BleProvider>(
+            builder: (context, ble, child) => IconButton(
+              onPressed: () => _showBleBottomSheet(context),
+              icon: Icon(
+                Icons.bluetooth,
+                color: ble.isConnected
+                    ? const Color(0xFF00B0FF)
+                    : const Color(0xFF5A7A9A),
+                size: 22,
+              ),
+              tooltip: 'Sensor BLE',
+            ),
+          ),
           Consumer<FlightProvider>(
             builder: (context, p, child) => TextButton.icon(
               onPressed: () => _showEndDialog(p),
@@ -329,14 +501,16 @@ class _FlightScreenState extends State<FlightScreen> {
           ),
         ],
       ),
-      body: Consumer<FlightProvider>(
-        builder: (context, p, child) {
-          // Use estimated diff for live visual feedback
+      body: Consumer2<FlightProvider, BleProvider>(
+        builder: (context, p, ble, child) {
           final diff = p.estimatedTankDiff;
           final overThreshold = diff >= p.switchThreshold;
 
           return Column(
             children: [
+              // BLE status bar
+              _BleStatusBar(ble: ble),
+
               // Diff banner
               AnimatedContainer(
                 duration: const Duration(milliseconds: 300),
@@ -387,7 +561,7 @@ class _FlightScreenState extends State<FlightScreen> {
                 child: ListView(
                   padding: const EdgeInsets.all(16),
                   children: [
-                    // Tank gauges — active tank shows real-time estimated remaining
+                    // Tank gauges
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -431,8 +605,8 @@ class _FlightScreenState extends State<FlightScreen> {
                     ),
                     const SizedBox(height: 10),
 
-                    // Fuel flow slider + estimation
-                    _FuelFlowCard(provider: p),
+                    // Fuel flow card (slider or BLE readout)
+                    _FuelFlowCard(provider: p, ble: ble),
                     const SizedBox(height: 20),
 
                     // Switch button
@@ -477,11 +651,85 @@ class _FlightScreenState extends State<FlightScreen> {
   }
 }
 
-// ---- Fuel Flow Card with Slider ----
+// ---- BLE Status Bar ----
+
+class _BleStatusBar extends StatelessWidget {
+  final BleProvider ble;
+  const _BleStatusBar({required this.ble});
+
+  @override
+  Widget build(BuildContext context) {
+    // Hide bar when disconnected and no data
+    if (ble.status == BleStatus.disconnected && ble.lastFf == null) {
+      return const SizedBox.shrink();
+    }
+
+    final label = _buildLabel(ble);
+
+    return Container(
+      height: 36,
+      color: const Color(0xFF09131F),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        children: [
+          _SignalDot(signal: ble.signal, status: ble.status),
+          const SizedBox(width: 8),
+          Text(
+            label,
+            style: const TextStyle(color: Color(0xFF8BA7C0), fontSize: 13),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _buildLabel(BleProvider ble) {
+    if (ble.status == BleStatus.scanning) return 'Procurando AvidyneFF...';
+    if (ble.status == BleStatus.connecting) return 'Conectando ao sensor...';
+    if (ble.signal == SensorSignal.ok && ble.lastFf != null) {
+      return 'AvidyneFF  ${ble.lastFf!.toStringAsFixed(1)} GPH  Conf: ${ble.lastConfidence ?? 0}%';
+    }
+    if (ble.signal == SensorSignal.stale) return 'Sensor sem dados recentes';
+    return 'Sensor offline';
+  }
+}
+
+// ---- Signal dot indicator ----
+
+class _SignalDot extends StatelessWidget {
+  final SensorSignal signal;
+  final BleStatus status;
+  const _SignalDot({required this.signal, required this.status});
+
+  @override
+  Widget build(BuildContext context) {
+    final Color color;
+    if (status == BleStatus.scanning || status == BleStatus.connecting) {
+      color = const Color(0xFFFFD600); // yellow while searching
+    } else {
+      switch (signal) {
+        case SensorSignal.ok:
+          color = const Color(0xFF00C853);
+        case SensorSignal.stale:
+          color = const Color(0xFFFFD600);
+        case SensorSignal.offline:
+          color = const Color(0xFFD50000);
+      }
+    }
+    return Container(
+      width: 10,
+      height: 10,
+      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+    );
+  }
+}
+
+// ---- Fuel Flow Card with Slider or BLE readout ----
 
 class _FuelFlowCard extends StatelessWidget {
   final FlightProvider provider;
-  const _FuelFlowCard({required this.provider});
+  final BleProvider ble;
+  const _FuelFlowCard({required this.provider, required this.ble});
 
   String _fmtDuration(Duration d) {
     if (d.isNegative || d == Duration.zero) return 'agora';
@@ -494,26 +742,54 @@ class _FuelFlowCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = provider;
+    final bleActive = ble.isReceivingValidData;
     final flowMin = p.fuelFlowMin;
     final flowMax = p.fuelFlowMax;
-    // Clamp to avoid RangeError if fuelFlow is 0 or outside bounds
     final currentFlow = p.fuelFlow <= 0
         ? flowMin
         : p.fuelFlow.clamp(flowMin, flowMax);
-    // 0.5 GPH steps
     final divisions = ((flowMax - flowMin) * 2).round();
 
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: const Color(0xFF0A1A2E),
-        border: Border.all(color: const Color(0xFF1E3A5F)),
+        border: Border.all(
+          color: bleActive
+              ? const Color(0xFF00C853).withValues(alpha: 0.5)
+              : const Color(0xFF1E3A5F),
+        ),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const _SectionLabel('Fuel Flow'),
+          Row(
+            children: [
+              const _SectionLabel('Fuel Flow'),
+              if (bleActive) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF00C853).withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(
+                        color: const Color(0xFF00C853).withValues(alpha: 0.4)),
+                  ),
+                  child: const Text(
+                    'Sensor BLE ativo',
+                    style: TextStyle(
+                      color: Color(0xFF00C853),
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
           const SizedBox(height: 10),
 
           // Current value display
@@ -522,8 +798,10 @@ class _FuelFlowCard extends StatelessWidget {
             children: [
               Text(
                 currentFlow.toStringAsFixed(1),
-                style: const TextStyle(
-                  color: Color(0xFFCCE3F5),
+                style: TextStyle(
+                  color: bleActive
+                      ? const Color(0xFF00C853)
+                      : const Color(0xFFCCE3F5),
                   fontSize: 32,
                   fontWeight: FontWeight.bold,
                   fontFamily: 'monospace',
@@ -537,13 +815,20 @@ class _FuelFlowCard extends StatelessWidget {
             ],
           ),
 
-          // Slider
+          // Slider — read-only when BLE active
           SliderTheme(
             data: SliderTheme.of(context).copyWith(
-              activeTrackColor: const Color(0xFF00B0FF),
+              activeTrackColor: bleActive
+                  ? const Color(0xFF00C853)
+                  : const Color(0xFF00B0FF),
               inactiveTrackColor: const Color(0xFF1E3A5F),
-              thumbColor: const Color(0xFF00B0FF),
-              overlayColor: const Color(0xFF00B0FF).withValues(alpha: 0.15),
+              thumbColor: bleActive
+                  ? const Color(0xFF00C853)
+                  : const Color(0xFF00B0FF),
+              overlayColor: (bleActive
+                      ? const Color(0xFF00C853)
+                      : const Color(0xFF00B0FF))
+                  .withValues(alpha: 0.15),
               valueIndicatorColor: const Color(0xFF0A1A2E),
               valueIndicatorTextStyle: const TextStyle(
                   color: Color(0xFFCCE3F5), fontWeight: FontWeight.bold),
@@ -555,7 +840,8 @@ class _FuelFlowCard extends StatelessWidget {
               divisions: divisions > 0 ? divisions : null,
               value: currentFlow,
               label: '${currentFlow.toStringAsFixed(1)} GPH',
-              onChanged: (v) => p.updateFuelFlow(v),
+              // Disable drag when BLE is active
+              onChanged: bleActive ? null : (v) => p.updateFuelFlow(v),
             ),
           ),
 

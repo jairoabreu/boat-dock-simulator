@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'providers/flight_provider.dart';
+import 'providers/ble_provider.dart';
 import 'services/storage_service.dart';
 import 'services/notification_service.dart';
 import 'screens/setup_screen.dart';
@@ -14,12 +15,17 @@ void main() async {
   final notif = NotificationService();
   await notif.init();
 
-  final provider = FlightProvider(storage, notif);
-  await provider.loadLastConfig();
+  final flightProvider = FlightProvider(storage, notif);
+  await flightProvider.loadLastConfig();
+
+  final bleProvider = BleProvider();
 
   runApp(
-    ChangeNotifierProvider.value(
-      value: provider,
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider.value(value: flightProvider),
+        ChangeNotifierProvider.value(value: bleProvider),
+      ],
       child: const FuelBalanceApp(),
     ),
   );

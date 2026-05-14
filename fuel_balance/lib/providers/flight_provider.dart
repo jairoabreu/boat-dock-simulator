@@ -39,6 +39,11 @@ class FlightProvider extends ChangeNotifier {
   Timer? _ticker;
   Duration _elapsed = Duration.zero;
 
+  // BLE integration state
+  double _bleConsumedSinceLastEvent = 0.0;
+  int? _lastBleT; // last ESP t value (millis)
+  bool bleActive = false; // set true when BleProvider.isReceivingValidData
+
   // Derived for display
   Duration get elapsed => _elapsed;
   double get totalConsumed => _totalConsumedNow;
@@ -51,8 +56,12 @@ class FlightProvider extends ChangeNotifier {
   double get fuelFlowMin => selectedAircraft?.fuelFlowMin ?? 5.0;
   double get fuelFlowMax => selectedAircraft?.fuelFlowMax ?? 50.0;
 
-  // Consumo estimado desde a última troca confirmada (acumulado tick a tick)
-  double get estimatedConsumedSinceLastEvent => _accumulatedConsumed;
+  // Consumo estimado desde a última troca confirmada
+  // Prefere integração BLE quando ativa; caso contrário usa acumulador tick-a-tick
+  double get estimatedConsumedSinceLastEvent {
+    if (bleActive) return _bleConsumedSinceLastEvent;
+    return _accumulatedConsumed;
+  }
 
   double get estimatedActiveTankRemaining =>
       (activeTank.remaining - estimatedConsumedSinceLastEvent)
@@ -199,8 +208,10 @@ class FlightProvider extends ChangeNotifier {
     tanks[activeTankIndex].consumed += consumedSinceLast;
     _totalConsumedNow = totalConsumedInput;
     _totalConsumedAtLastSwitch = totalConsumedInput;
-    // Zera o acumulador — próxima estimativa parte do zero a partir daqui
+    // Zera os acumuladores — próxima estimativa parte do zero a partir daqui
     _accumulatedConsumed = 0.0;
+    _bleConsumedSinceLastEvent = 0.0;
+    _lastBleT = null;
 
     final record = SwitchRecord(
       timestamp: switchTime,
@@ -258,6 +269,31 @@ class FlightProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Called by BleProvider when a valid reading arrives.
+  /// Uses ESP millis differences for accurate dt integration.
+  void onBleReading(int espT, double ffGph) {
+    if (phase != FlightPhase.active) return;
+    if (_lastBleT == null || espT < _lastBleT!) {
+      // First packet or ESP restarted — just sync timestamp, skip integration
+      _lastBleT = espT;
+      return;
+    }
+    final dtMs = espT - _lastBleT!;
+    _lastBleT = espT;
+    if (dtMs <= 0 || dtMs > 10000) return; // sanity check
+    final dtS = dtMs / 1000.0;
+    _bleConsumedSinceLastEvent += ffGph * dtS / 3600.0;
+    // Keep fuelFlow in sync for display/estimation continuity
+    fuelFlow = ffGph;
+    notifyListeners();
+  }
+
+  /// Set by BleProvider when isReceivingValidData changes.
+  void setBleActive(bool v) {
+    bleActive = v;
+    notifyListeners();
+  }
+
   Future<void> _saveConfig() async {
     await _storage.savePref('tank0Name', tanks[0].name);
     await _storage.savePref('tank0Capacity', tanks[0].capacity.toString());
@@ -300,6 +336,9 @@ class FlightProvider extends ChangeNotifier {
     _flightId = null;
     _startTime = null;
     _accumulatedConsumed = 0.0;
+    _bleConsumedSinceLastEvent = 0.0;
+    _lastBleT = null;
+    bleActive = false;
     _elapsed = Duration.zero;
     _totalConsumedNow = 0;
     _totalConsumedAtLastSwitch = 0;

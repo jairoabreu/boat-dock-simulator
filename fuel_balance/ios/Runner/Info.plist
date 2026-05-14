@@ -6,8 +6,13 @@
 	<true/>
 	<key>NSUserNotificationsUsageDescription</key>
 	<string>Notificações para alertar sobre desequilíbrio de combustível entre tanques.</string>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>Necessário para receber leituras de combustível do sensor AvidyneFF.</string>
+	<key>NSBluetoothPeripheralUsageDescription</key>
+	<string>Necessário para receber leituras de combustível do sensor AvidyneFF.</string>
 	<key>UIBackgroundModes</key>
 	<array>
+		<string>bluetooth-central</string>
 		<string>fetch</string>
 		<string>processing</string>
 	</array>
