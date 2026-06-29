@@ -190,6 +190,118 @@ header p  { font-size:9px; letter-spacing:1.5px; color:#243a52; margin-top:3px; 
   transform-box:fill-box; transform-origin:center;
   animation:spin-cw 8s linear infinite; animation-play-state:paused;
 }
+
+/* ── CONTROL MODE TABS ── */
+.ctrl-tabs {
+  display:flex; width:100%; border-radius:8px; overflow:hidden;
+  border:1px solid #142238;
+}
+.ctrl-tab {
+  flex:1; background:#0a1624; border:none; color:#2a5070;
+  padding:9px 4px; font-size:10px; letter-spacing:1.5px;
+  text-transform:uppercase; cursor:pointer; transition:all .2s; font-family:inherit;
+}
+.ctrl-tab:first-child { border-right:1px solid #142238; }
+.ctrl-tab.active { background:#0c2030; color:#4a9ad4; border-bottom:2px solid #2a7ab0; }
+.ctrl-tab:hover:not(.active) { background:#0c1828; color:#3a7898; }
+
+/* ── MANETES ── */
+.manetes-section { display:flex; flex-direction:column; align-items:center; gap:8px; width:100%; }
+.manetes-hint { font-size:9px; color:#1a3550; letter-spacing:0.5px; text-align:center; line-height:1.5; }
+.manetes-container { display:flex; gap:28px; justify-content:center; align-items:flex-start; }
+.manete-wrap { display:flex; flex-direction:column; align-items:center; gap:5px; }
+.manete-side-lbl { font-size:11px; letter-spacing:2px; color:#2a5070; text-transform:uppercase; font-weight:600; }
+.manete-track {
+  position:relative; width:46px; height:200px;
+  background:radial-gradient(ellipse at 50% 46%, #0f2038 55%, #07101e);
+  border-radius:23px; cursor:ns-resize; border:1px solid #1a3050;
+  box-shadow:0 0 30px #00000099, inset 0 0 20px #00000066;
+  user-select:none; touch-action:none;
+}
+.manete-end-lbl {
+  position:absolute; left:50%; transform:translateX(-50%);
+  font-size:8px; color:#2a5070; letter-spacing:1px; font-family:monospace; pointer-events:none;
+}
+.manete-end-lbl.av { top:5px; }
+.manete-end-lbl.re { bottom:5px; }
+.manete-neutral-line {
+  position:absolute; left:8px; right:8px; top:50%; height:1px;
+  background:#1a3a5a; transform:translateY(-50%); pointer-events:none;
+}
+.manete-fill {
+  position:absolute; left:16px; right:16px; border-radius:3px; pointer-events:none;
+}
+.manete-handle {
+  position:absolute; left:50%; transform:translateX(-50%);
+  width:38px; height:30px; border-radius:8px;
+  background:radial-gradient(circle at 36% 30%, #6abae8, #1a4a82);
+  border:2px solid #3a90d0; cursor:grab;
+  box-shadow:0 4px 16px #00000099, 0 0 12px #1a72b040; z-index:2;
+}
+.manete-handle.active { cursor:grabbing; box-shadow:0 4px 20px #00000099, 0 0 20px #2a92e060; }
+.manete-val {
+  font-size:12px; font-weight:600; font-variant-numeric:tabular-nums;
+  color:#4a88b0; font-family:'Courier New',monospace;
+}
+
+/* ── MODAL ── */
+.modal-overlay {
+  position:fixed; inset:0; background:#00000090;
+  display:flex; align-items:center; justify-content:center;
+  z-index:1000; backdrop-filter:blur(5px);
+}
+.modal-overlay.hidden { display:none; }
+.modal-box {
+  background:#0d1e30; border:1px solid #1a3a52; border-radius:14px;
+  padding:28px 32px; min-width:300px; max-width:430px; width:90%;
+  box-shadow:0 8px 60px #00000099;
+  display:flex; flex-direction:column; gap:14px;
+}
+.modal-title { font-size:13px; letter-spacing:3px; color:#4a8ab0;
+               text-transform:uppercase; text-align:center; }
+.modal-sub { font-size:10px; color:#2a5070; text-align:center;
+             letter-spacing:1px; line-height:1.6; }
+.modal-input {
+  background:#07101e; border:1px solid #1a3a52; color:#b8d0e4;
+  border-radius:8px; padding:10px 14px; font-size:15px; outline:none;
+  font-family:inherit; width:100%; letter-spacing:0.5px; transition:border-color .2s;
+}
+.modal-input:focus { border-color:#3a80b0; }
+.modal-btn-primary {
+  background:#0c3050; border:1px solid #2a6898; color:#4ab0e8;
+  padding:12px; border-radius:8px; cursor:pointer; font-size:12px;
+  letter-spacing:2px; text-transform:uppercase; transition:all .2s; font-family:inherit; width:100%;
+}
+.modal-btn-primary:hover { background:#163850; color:#80c8f0; }
+.modal-btn-secondary {
+  background:transparent; border:1px solid #1a3050; color:#2a5070;
+  padding:10px; border-radius:8px; cursor:pointer; font-size:11px;
+  letter-spacing:1.5px; text-transform:uppercase; transition:all .2s; font-family:inherit; width:100%;
+}
+.modal-btn-secondary:hover { border-color:#2a5070; color:#4a8098; }
+
+/* ── RANKING ── */
+.ranking-list { display:flex; flex-direction:column; gap:4px; max-height:220px; overflow-y:auto; }
+.ranking-entry {
+  display:flex; align-items:center; gap:10px; padding:6px 10px;
+  border-radius:6px; background:#071422; border:1px solid #0e2038;
+}
+.ranking-entry.gold   { border-color:#604010; background:#180e02; }
+.ranking-entry.silver { border-color:#383848; background:#10101a; }
+.ranking-entry.bronze { border-color:#402010; background:#100a02; }
+.ranking-entry.current .ranking-name { color:#4ab0e8; }
+.ranking-entry.current .ranking-time { color:#2ae07e; }
+.ranking-pos { font-size:12px; min-width:22px; text-align:center; color:#2a5070; font-family:monospace; }
+.ranking-name { flex:1; font-size:11px; color:#8ab8d8; letter-spacing:0.5px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+.ranking-time { font-size:12px; color:#4a88b0; font-family:'Courier New',monospace; font-weight:600; }
+.ranking-divider { height:1px; background:#142238; }
+.dock-result-time {
+  text-align:center; font-size:34px; font-weight:600;
+  font-family:'Courier New',monospace; color:#2ae07e;
+  font-variant-numeric:tabular-nums; letter-spacing:2px;
+  text-shadow:0 0 24px #2ae07e50;
+}
+.dock-result-sub { text-align:center; font-size:9px; color:#1a7040; letter-spacing:2px; text-transform:uppercase; }
 </style>
 </head>
 <body>
@@ -1172,8 +1284,14 @@ header p  { font-size:9px; letter-spacing:1.5px; color:#243a52; margin-top:3px; 
       <button class="thr-btn" id="bow-stbd-btn">BE ▶</button>
     </div>
 
-    <div class="joy-section">
-      <div class="joy-title">Joystick de Propulsão</div>
+    <!-- Seletor de modo de controle -->
+    <div class="ctrl-tabs">
+      <button class="ctrl-tab active" id="tab-joystick">⊕ Joystick</button>
+      <button class="ctrl-tab" id="tab-manetes">⚙ Manetes</button>
+    </div>
+
+    <!-- Joystick -->
+    <div class="joy-section" id="ctrl-joystick">
       <div class="joy-hint">
         Arraste o centro → Avanço / Deriva<br>
         Arraste o anel externo → Guinada
@@ -1206,6 +1324,38 @@ header p  { font-size:9px; letter-spacing:1.5px; color:#243a52; margin-top:3px; 
           <text x="182" y="114" text-anchor="middle" font-size="8" fill="#2a5070">BE</text>
         </svg>
         <div class="joy-handle" id="joy-handle"></div>
+      </div>
+    </div>
+
+    <!-- Manetes -->
+    <div class="manetes-section" id="ctrl-manetes" style="display:none">
+      <div class="manetes-hint">
+        Arraste os manetes → Avanço / Ré<br>
+        BB e BE independentes
+      </div>
+      <div class="manetes-container">
+        <div class="manete-wrap">
+          <div class="manete-side-lbl">BB</div>
+          <div class="manete-track" id="manete-port-track">
+            <span class="manete-end-lbl av">AV</span>
+            <div class="manete-neutral-line"></div>
+            <div class="manete-fill" id="manete-port-fill"></div>
+            <div class="manete-handle" id="manete-port-handle"></div>
+            <span class="manete-end-lbl re">RÉ</span>
+          </div>
+          <div class="manete-val" id="manete-port-val">0%</div>
+        </div>
+        <div class="manete-wrap">
+          <div class="manete-side-lbl">BE</div>
+          <div class="manete-track" id="manete-stbd-track">
+            <span class="manete-end-lbl av">AV</span>
+            <div class="manete-neutral-line"></div>
+            <div class="manete-fill" id="manete-stbd-fill"></div>
+            <div class="manete-handle" id="manete-stbd-handle"></div>
+            <span class="manete-end-lbl re">RÉ</span>
+          </div>
+          <div class="manete-val" id="manete-stbd-val">0%</div>
+        </div>
       </div>
     </div>
 
@@ -1305,10 +1455,34 @@ header p  { font-size:9px; letter-spacing:1.5px; color:#243a52; margin-top:3px; 
       <div class="prop-card"><div class="prop-lbl">↔ Stern Thruster</div><div class="prop-track"><div class="prop-fill" id="fill-stern"></div></div><div class="prop-num" id="num-stern">0%</div></div>
     </div>
 
-    <button class="btn-reset" id="btn-reset">⊕ Centralizar Joystick</button>
+    <button class="btn-reset" id="btn-reset">⊕ Zerar Comandos</button>
   </div><!-- /controls -->
 
 </div><!-- /main -->
+
+<!-- ═══ MODAL: NOME DO JOGADOR ═══ -->
+<div class="modal-overlay" id="modal-start">
+  <div class="modal-box">
+    <div class="modal-title">⚓ Boat Dock Simulator</div>
+    <div class="modal-sub">Marine Telematics — Maneuvering Simulator<br>Digite seu nome para iniciar a manobra</div>
+    <input class="modal-input" id="player-name-input" type="text" placeholder="Seu nome" maxlength="24" autocomplete="off">
+    <button class="modal-btn-primary" id="btn-start-game">▶ Iniciar Manobra</button>
+  </div>
+</div>
+
+<!-- ═══ MODAL: RESULTADO + RANKING ═══ -->
+<div class="modal-overlay hidden" id="modal-finish">
+  <div class="modal-box">
+    <div class="modal-title">🏆 Atracação Concluída!</div>
+    <div class="dock-result-time" id="finish-time">00:00.0</div>
+    <div class="dock-result-sub">tempo de manobra</div>
+    <div class="ranking-divider"></div>
+    <div style="font-size:9px;color:#2a5070;letter-spacing:2px;text-transform:uppercase">Ranking</div>
+    <div class="ranking-list" id="finish-ranking"></div>
+    <div class="ranking-divider"></div>
+    <button class="modal-btn-primary" id="btn-play-again">↺ Jogar Novamente</button>
+  </div>
+</div>
 
 <script>
 // ══════════════════════════════════════════════════
@@ -1663,25 +1837,36 @@ function pollGamepad() {
 }
 
 function calcThrust() {
-  const {surge,sway,yaw}=state;
-  thrust.port=0; thrust.stbd=0;
   let cmdBow = 0, cmdStern = 0;
-  if (Math.abs(yaw)>0.015) {
-    thrust.port=clamp(yaw,-1,1); thrust.stbd=clamp(-yaw,-1,1);
-    cmdBow   = clamp(bowBtn,-1,1);
-    cmdStern = clamp(sternBtn,-1,1);
+
+  if (controlMode === 'manetes') {
+    // Manetes: controle direto de cada hélice; thrusters só via botões
+    thrust.port = manetePort;
+    thrust.stbd = maneteStbd;
+    cmdBow   = hasBow   ? clamp(bowBtn,   -1, 1) : 0;
+    cmdStern = hasStern ? clamp(sternBtn, -1, 1) : 0;
   } else {
-    const absSurge=Math.abs(surge), absSway=Math.abs(sway), mag=Math.hypot(surge,sway);
-    let joyBow=0, joyStern=0;
-    if (mag>=0.02) {
-      if (absSurge>=absSway*2)     { thrust.port=surge; thrust.stbd=surge; }
-      else if (absSway>=absSurge*2){ joyBow=sway; joyStern=sway; }
-      else if (sway<0)             { thrust.stbd=surge; }
-      else                         { thrust.port=surge; }
+    // Joystick: lógica por zonas
+    const {surge,sway,yaw}=state;
+    thrust.port=0; thrust.stbd=0;
+    if (Math.abs(yaw)>0.015) {
+      thrust.port=clamp(yaw,-1,1); thrust.stbd=clamp(-yaw,-1,1);
+      cmdBow   = clamp(bowBtn,-1,1);
+      cmdStern = clamp(sternBtn,-1,1);
+    } else {
+      const absSurge=Math.abs(surge), absSway=Math.abs(sway), mag=Math.hypot(surge,sway);
+      let joyBow=0, joyStern=0;
+      if (mag>=0.02) {
+        if (absSurge>=absSway*2)     { thrust.port=surge; thrust.stbd=surge; }
+        else if (absSway>=absSurge*2){ joyBow=sway; joyStern=sway; }
+        else if (sway<0)             { thrust.stbd=surge; }
+        else                         { thrust.port=surge; }
+      }
+      cmdBow   = hasBow   ? clamp(joyBow   + bowBtn,  -1,1) : 0;
+      cmdStern = hasStern ? clamp(joyStern + sternBtn, -1,1) : 0;
     }
-    cmdBow   = hasBow   ? clamp(joyBow   + bowBtn,  -1,1) : 0;
-    cmdStern = hasStern ? clamp(joyStern + sternBtn, -1,1) : 0;
   }
+
   // Rampa em direção ao comando (lag do túnel do thruster)
   thrust.bow   += clamp(cmdBow   - thrust.bow,   -THRUSTER_RAMP, THRUSTER_RAMP);
   thrust.stern += clamp(cmdStern - thrust.stern, -THRUSTER_RAMP, THRUSTER_RAMP);
@@ -2016,10 +2201,11 @@ function updateChrono() {
   const dt  = now - prevFrameMs;
   prevFrameMs = now;
 
-  // Início: primeira vez que há qualquer comando (joystick ou botões de thruster)
+  // Início: primeira vez que há qualquer comando (joystick, manetes ou botões de thruster)
   if (chronoStart === null) {
     const cmdActive = Math.abs(state.surge) > 0.02 || Math.abs(state.sway) > 0.02
-                   || Math.abs(state.yaw)   > 0.02 || bowBtn !== 0 || sternBtn !== 0;
+                   || Math.abs(state.yaw)   > 0.02 || bowBtn !== 0 || sternBtn !== 0
+                   || Math.abs(manetePort) > 0.02  || Math.abs(maneteStbd) > 0.02;
     if (cmdActive) {
       chronoStart = now;
       chronoEl.classList.add('running');
@@ -2050,7 +2236,9 @@ function updateChrono() {
       chronoEnd = now;
       chronoEl.classList.remove('running');
       chronoEl.classList.add('done');
-      chronoValEl.textContent = fmtChrono(chronoEnd - chronoStart);
+      const finalMs = chronoEnd - chronoStart;
+      chronoValEl.textContent = fmtChrono(finalMs);
+      showFinishModal(finalMs);
     }
   } else {
     dockHoldMs = 0;
@@ -2192,6 +2380,8 @@ document.getElementById('btn-reset').addEventListener('click', () => {
   bowBtn=0; sternBtn=0;
   joyHandle.style.transform='translate(-50%,-50%)';
   document.querySelectorAll('.thr-btn').forEach(b=>b.classList.remove('active'));
+  manetePort=0; maneteStbd=0;
+  updateManeteVisual('port'); updateManeteVisual('stbd');
 });
 
 document.getElementById('btn-dock').addEventListener('click', () => {
@@ -2202,6 +2392,8 @@ document.getElementById('btn-dock').addEventListener('click', () => {
   bowBtn=0; sternBtn=0;
   joyHandle.style.transform='translate(-50%,-50%)';
   document.querySelectorAll('.thr-btn').forEach(b=>b.classList.remove('active'));
+  manetePort=0; maneteStbd=0;
+  updateManeteVisual('port'); updateManeteVisual('stbd');
   chronoReset();
 });
 
@@ -2255,6 +2447,9 @@ function applyVesselProfile(id) {
   wakePoints.length = 0;
   state.surge = 0; state.sway = 0; state.yaw = 0;
   joyHandle.style.transform = 'translate(-50%,-50%)';
+  manetePort = 0; maneteStbd = 0;
+  updateManeteVisual('port'); updateManeteVisual('stbd');
+  chronoReset();
 
   // 6) Reseta sliders de ganho para os defaults (35% / 25%)
   //    Mantê-los do perfil anterior distorce o comportamento do novo.
@@ -2290,13 +2485,209 @@ document.querySelectorAll('.vessel-picker .cfg-toggle').forEach(btn => {
   btn.addEventListener('click', () => applyVesselProfile(btn.dataset.vessel));
 });
 
-// Aplica o perfil inicial antes de iniciar o loop.
-applyVesselProfile(currentVesselId);
+// ══════════════════════════════════════════════════
+// MODO DE CONTROLE — Joystick ↔ Manetes
+// ══════════════════════════════════════════════════
+let controlMode = 'joystick';
+
+document.getElementById('tab-joystick').addEventListener('click', () => {
+  if (controlMode === 'joystick') return;
+  controlMode = 'joystick';
+  document.getElementById('tab-joystick').classList.add('active');
+  document.getElementById('tab-manetes').classList.remove('active');
+  document.getElementById('ctrl-joystick').style.display = '';
+  document.getElementById('ctrl-manetes').style.display = 'none';
+  document.getElementById('gamepad-wrap').style.display = '';
+  manetePort = 0; maneteStbd = 0;
+  updateManeteVisual('port'); updateManeteVisual('stbd');
+});
+
+document.getElementById('tab-manetes').addEventListener('click', () => {
+  if (controlMode === 'manetes') return;
+  controlMode = 'manetes';
+  document.getElementById('tab-manetes').classList.add('active');
+  document.getElementById('tab-joystick').classList.remove('active');
+  document.getElementById('ctrl-joystick').style.display = 'none';
+  document.getElementById('ctrl-manetes').style.display = '';
+  document.getElementById('gamepad-wrap').style.display = 'none';
+  state.surge = 0; state.sway = 0; state.yaw = 0;
+  joyHandle.style.transform = 'translate(-50%,-50%)';
+});
 
 // ══════════════════════════════════════════════════
-// START
+// MANETES
 // ══════════════════════════════════════════════════
+let manetePort = 0, maneteStbd = 0;
+let draggingManete = null;
+let maneteDragStartY = 0, maneteDragStartVal = 0;
+
+const MANETE_TRACK_H = 200;
+const MANETE_HANDLE_H = 30;
+const MANETE_MAX_PX = MANETE_TRACK_H / 2 - MANETE_HANDLE_H / 2 - 6;  // ~79 px = full scale
+
+function updateManeteVisual(side) {
+  const val = side === 'port' ? manetePort : maneteStbd;
+  const handle = document.getElementById('manete-' + side + '-handle');
+  const fill   = document.getElementById('manete-' + side + '-fill');
+  const valEl  = document.getElementById('manete-' + side + '-val');
+  if (!handle) return;
+
+  const neutralY    = MANETE_TRACK_H / 2;
+  const handleCtrY  = neutralY - val * MANETE_MAX_PX;
+  handle.style.top  = (handleCtrY - MANETE_HANDLE_H / 2) + 'px';
+
+  if (val > 0.01) {
+    fill.style.top        = handleCtrY + 'px';
+    fill.style.height     = (neutralY - handleCtrY) + 'px';
+    fill.style.background = '#26d46a44';
+  } else if (val < -0.01) {
+    fill.style.top        = neutralY + 'px';
+    fill.style.height     = (handleCtrY - neutralY) + 'px';
+    fill.style.background = '#e0404444';
+  } else {
+    fill.style.height = '0';
+  }
+
+  const pct = Math.round(val * 100);
+  valEl.textContent = (pct > 0 ? '+' : '') + pct + '%';
+  valEl.style.color = val > 0.02 ? '#26d46a' : val < -0.02 ? '#e04040' : '#4a88b0';
+}
+
+['port', 'stbd'].forEach(side => {
+  const handle = document.getElementById('manete-' + side + '-handle');
+  if (!handle) return;
+
+  const startDrag = clientY => {
+    draggingManete    = side;
+    maneteDragStartY  = clientY;
+    maneteDragStartVal = side === 'port' ? manetePort : maneteStbd;
+    handle.classList.add('active');
+  };
+
+  handle.addEventListener('mousedown', e => { startDrag(e.clientY); e.preventDefault(); e.stopPropagation(); });
+  handle.addEventListener('touchstart', e => { startDrag(e.touches[0].clientY); e.preventDefault(); e.stopPropagation(); }, { passive: false });
+});
+
+document.addEventListener('mousemove', e => {
+  if (!draggingManete) return;
+  applyManeteDrag(e.clientY);
+});
+document.addEventListener('touchmove', e => {
+  if (!draggingManete) return;
+  applyManeteDrag(e.touches[0].clientY);
+  e.preventDefault();
+}, { passive: false });
+
+function applyManeteDrag(clientY) {
+  const dy = clientY - maneteDragStartY;
+  const newVal = clamp(maneteDragStartVal - dy / MANETE_MAX_PX, -1, 1);
+  if (draggingManete === 'port') manetePort = newVal;
+  else maneteStbd = newVal;
+  updateManeteVisual(draggingManete);
+}
+
+document.addEventListener('mouseup', () => {
+  if (!draggingManete) return;
+  const h = document.getElementById('manete-' + draggingManete + '-handle');
+  if (h) h.classList.remove('active');
+  draggingManete = null;
+});
+document.addEventListener('touchend', () => {
+  if (!draggingManete) return;
+  const h = document.getElementById('manete-' + draggingManete + '-handle');
+  if (h) h.classList.remove('active');
+  draggingManete = null;
+});
+
+// ══════════════════════════════════════════════════
+// JOGADOR + RANKING
+// ══════════════════════════════════════════════════
+let currentPlayer = '';
+const RANKING_KEY = 'boat-dock-ranking-v1';
+
+function loadRanking() {
+  try { return JSON.parse(localStorage.getItem(RANKING_KEY) || '[]'); }
+  catch { return []; }
+}
+function saveRanking(entries) {
+  localStorage.setItem(RANKING_KEY, JSON.stringify(entries));
+}
+function addRankingEntry(name, ms) {
+  const entries = loadRanking();
+  entries.push({ name, ms, vessel: vesselProfiles[currentVesselId].name });
+  entries.sort((a, b) => a.ms - b.ms);
+  const top = entries.slice(0, 20);
+  saveRanking(top);
+  return top;
+}
+function renderRanking(container, entries, highlightMs) {
+  container.innerHTML = '';
+  if (!entries.length) {
+    container.innerHTML = '<div style="text-align:center;color:#1e4060;font-size:11px;padding:12px">Nenhuma atracação registrada</div>';
+    return;
+  }
+  entries.forEach((e, i) => {
+    const div = document.createElement('div');
+    div.className = 'ranking-entry' + (i===0?' gold':i===1?' silver':i===2?' bronze':'');
+    if (e.ms === highlightMs && e.name === currentPlayer) div.classList.add('current');
+    const medal = i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1)+'.';
+    div.innerHTML = '<span class="ranking-pos">' + medal + '</span>'
+                  + '<span class="ranking-name">' + e.name + '</span>'
+                  + '<span class="ranking-time">' + fmtChrono(e.ms) + '</span>';
+    container.appendChild(div);
+  });
+}
+
+const startModal       = document.getElementById('modal-start');
+const playerNameInput  = document.getElementById('player-name-input');
+const finishModal      = document.getElementById('modal-finish');
+const finishTimeEl     = document.getElementById('finish-time');
+const finishRankingEl  = document.getElementById('finish-ranking');
+
+function showStartModal() {
+  startModal.classList.remove('hidden');
+  setTimeout(() => playerNameInput.focus(), 80);
+}
+function hideStartModal() {
+  const name = playerNameInput.value.trim();
+  if (!name) { playerNameInput.focus(); return; }
+  currentPlayer = name;
+  startModal.classList.add('hidden');
+  // Reposiciona barco e zera tudo para a nova tentativa
+  boat.x = DOCK.x; boat.y = DOCK.y; boat.heading = DOCK.heading;
+  boat.vx = 0; boat.vy = 0; boat.vr = 0;
+  wakePoints.length = 0;
+  state.surge = 0; state.sway = 0; state.yaw = 0;
+  bowBtn = 0; sternBtn = 0;
+  joyHandle.style.transform = 'translate(-50%,-50%)';
+  manetePort = 0; maneteStbd = 0;
+  updateManeteVisual('port'); updateManeteVisual('stbd');
+  document.querySelectorAll('.thr-btn').forEach(b => b.classList.remove('active'));
+  chronoReset();
+}
+function showFinishModal(ms) {
+  if (!currentPlayer) return;
+  const entries = addRankingEntry(currentPlayer, ms);
+  finishTimeEl.textContent = fmtChrono(ms);
+  renderRanking(finishRankingEl, entries, ms);
+  finishModal.classList.remove('hidden');
+}
+
+document.getElementById('btn-start-game').addEventListener('click', hideStartModal);
+playerNameInput.addEventListener('keydown', e => { if (e.key === 'Enter') hideStartModal(); });
+
+document.getElementById('btn-play-again').addEventListener('click', () => {
+  finishModal.classList.add('hidden');
+  playerNameInput.value = currentPlayer;
+  showStartModal();
+});
+
+// ══════════════════════════════════════════════════
+// START — aplica perfil depois de todas as variáveis declaradas
+// ══════════════════════════════════════════════════
+applyVesselProfile(currentVesselId);
 gameLoop();
+showStartModal();
 </script>
 </body>
 </html>
