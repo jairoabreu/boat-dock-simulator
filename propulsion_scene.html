@@ -239,9 +239,21 @@ header p  { font-size:9px; letter-spacing:1.5px; color:#243a52; margin-top:3px; 
   box-shadow:0 4px 16px #00000099, 0 0 12px #1a72b040; z-index:2;
 }
 .manete-handle.active { cursor:grabbing; box-shadow:0 4px 20px #00000099, 0 0 20px #2a92e060; }
+.manete-handle.engaged     { border-color:#c88830; box-shadow:0 4px 16px #00000099, 0 0 14px #c8883040; }
+.manete-handle.throttle-fwd{ border-color:#26d46a; box-shadow:0 4px 16px #00000099, 0 0 14px #26d46a50; }
+.manete-handle.throttle-rev{ border-color:#e04040; box-shadow:0 4px 16px #00000099, 0 0 14px #e0404050; }
 .manete-val {
   font-size:12px; font-weight:600; font-variant-numeric:tabular-nums;
   color:#4a88b0; font-family:'Courier New',monospace;
+}
+.manete-zone-lbl {
+  font-size:8px; letter-spacing:1.5px; text-transform:uppercase;
+  font-family:monospace; color:#1e4060; text-align:center;
+}
+.manete-detent {
+  position:absolute; left:5px; right:5px; height:1px; pointer-events:none;
+  background: repeating-linear-gradient(90deg,#c88830 0,#c88830 4px,transparent 4px,transparent 8px);
+  opacity:0.7;
 }
 
 /* ── MODAL ── */
@@ -1338,23 +1350,29 @@ header p  { font-size:9px; letter-spacing:1.5px; color:#243a52; margin-top:3px; 
           <div class="manete-side-lbl">BB</div>
           <div class="manete-track" id="manete-port-track">
             <span class="manete-end-lbl av">AV</span>
+            <div class="manete-detent" id="manete-port-detent-fwd"></div>
+            <div class="manete-detent" id="manete-port-detent-rev"></div>
             <div class="manete-neutral-line"></div>
             <div class="manete-fill" id="manete-port-fill"></div>
             <div class="manete-handle" id="manete-port-handle"></div>
             <span class="manete-end-lbl re">RÉ</span>
           </div>
-          <div class="manete-val" id="manete-port-val">0%</div>
+          <div class="manete-zone-lbl" id="manete-port-zone">NEUTRO</div>
+          <div class="manete-val" id="manete-port-val">—</div>
         </div>
         <div class="manete-wrap">
           <div class="manete-side-lbl">BE</div>
           <div class="manete-track" id="manete-stbd-track">
             <span class="manete-end-lbl av">AV</span>
+            <div class="manete-detent" id="manete-stbd-detent-fwd"></div>
+            <div class="manete-detent" id="manete-stbd-detent-rev"></div>
             <div class="manete-neutral-line"></div>
             <div class="manete-fill" id="manete-stbd-fill"></div>
             <div class="manete-handle" id="manete-stbd-handle"></div>
             <span class="manete-end-lbl re">RÉ</span>
           </div>
-          <div class="manete-val" id="manete-stbd-val">0%</div>
+          <div class="manete-zone-lbl" id="manete-stbd-zone">NEUTRO</div>
+          <div class="manete-val" id="manete-stbd-val">—</div>
         </div>
       </div>
     </div>
@@ -1840,9 +1858,9 @@ function calcThrust() {
   let cmdBow = 0, cmdStern = 0;
 
   if (controlMode === 'manetes') {
-    // Manetes: controle direto de cada hélice; thrusters só via botões
-    thrust.port = manetePort;
-    thrust.stbd = maneteStbd;
+    // Manetes: curva F-N-R (neutro → engate idle → aceleração 0-100%)
+    thrust.port = maneteToThrust(manetePort);
+    thrust.stbd = maneteToThrust(maneteStbd);
     cmdBow   = hasBow   ? clamp(bowBtn,   -1, 1) : 0;
     cmdStern = hasStern ? clamp(sternBtn, -1, 1) : 0;
   } else {
@@ -2521,36 +2539,74 @@ let manetePort = 0, maneteStbd = 0;
 let draggingManete = null;
 let maneteDragStartY = 0, maneteDragStartVal = 0;
 
-const MANETE_TRACK_H = 200;
+const MANETE_TRACK_H  = 200;
 const MANETE_HANDLE_H = 30;
-const MANETE_MAX_PX = MANETE_TRACK_H / 2 - MANETE_HANDLE_H / 2 - 6;  // ~79 px = full scale
+const MANETE_MAX_PX   = MANETE_TRACK_H / 2 - MANETE_HANDLE_H / 2 - 6;  // ~79 px = full scale
+
+// ── Zonas F-N-R ──
+// NEUTRAL: morto, caixa solta. ENGAGE: caixa em gear / motor em idle. Acima = throttle 0→100%.
+const MANETE_NEUTRAL = 0.10;
+const MANETE_ENGAGE  = 0.25;   // ~15° a partir do neutro (conforme configuração física)
+const MANETE_IDLE    = 0.07;   // empuxo de marcha lenta em gear
+
+function maneteToThrust(val) {
+  const abs = Math.abs(val);
+  const sgn = val >= 0 ? 1 : -1;
+  if (abs < MANETE_NEUTRAL) return 0;                                          // NEUTRO
+  if (abs < MANETE_ENGAGE)  return sgn * MANETE_IDLE;                          // ENGAJADO (idle)
+  return sgn * (abs - MANETE_ENGAGE) / (1 - MANETE_ENGAGE);                   // ACELERAÇÃO 0→1
+}
+
+function initManeteDetents() {
+  const neutralY = MANETE_TRACK_H / 2;
+  const engPx    = MANETE_ENGAGE * MANETE_MAX_PX;
+  ['port', 'stbd'].forEach(side => {
+    const fwd = document.getElementById('manete-' + side + '-detent-fwd');
+    const rev = document.getElementById('manete-' + side + '-detent-rev');
+    if (fwd) fwd.style.top = (neutralY - engPx) + 'px';
+    if (rev) rev.style.top = (neutralY + engPx) + 'px';
+  });
+}
 
 function updateManeteVisual(side) {
-  const val = side === 'port' ? manetePort : maneteStbd;
+  const val    = side === 'port' ? manetePort : maneteStbd;
   const handle = document.getElementById('manete-' + side + '-handle');
   const fill   = document.getElementById('manete-' + side + '-fill');
   const valEl  = document.getElementById('manete-' + side + '-val');
+  const zoneEl = document.getElementById('manete-' + side + '-zone');
   if (!handle) return;
 
-  const neutralY    = MANETE_TRACK_H / 2;
-  const handleCtrY  = neutralY - val * MANETE_MAX_PX;
-  handle.style.top  = (handleCtrY - MANETE_HANDLE_H / 2) + 'px';
+  const neutralY   = MANETE_TRACK_H / 2;
+  const handleCtrY = neutralY - val * MANETE_MAX_PX;
+  handle.style.top = (handleCtrY - MANETE_HANDLE_H / 2) + 'px';
 
-  if (val > 0.01) {
-    fill.style.top        = handleCtrY + 'px';
-    fill.style.height     = (neutralY - handleCtrY) + 'px';
-    fill.style.background = '#26d46a44';
-  } else if (val < -0.01) {
-    fill.style.top        = neutralY + 'px';
-    fill.style.height     = (handleCtrY - neutralY) + 'px';
-    fill.style.background = '#e0404444';
-  } else {
+  const abs = Math.abs(val);
+
+  // Zona F-N-R: cor do fill + classe do handle + label
+  if (abs < MANETE_NEUTRAL) {
     fill.style.height = '0';
+    handle.className  = 'manete-handle';
+    if (zoneEl) { zoneEl.textContent = 'NEUTRO'; zoneEl.style.color = '#2a5070'; }
+    valEl.textContent = '—'; valEl.style.color = '#2a5070';
+  } else if (abs < MANETE_ENGAGE) {
+    // Zona de engate — fill âmbar, handle âmbar
+    fill.style.top        = val > 0 ? handleCtrY + 'px' : neutralY + 'px';
+    fill.style.height     = val > 0 ? (neutralY - handleCtrY) + 'px' : (handleCtrY - neutralY) + 'px';
+    fill.style.background = '#c8883044';
+    handle.className      = 'manete-handle engaged';
+    if (zoneEl) { zoneEl.textContent = val > 0 ? '▲ ENGAJADO' : '▼ ENGAJADO'; zoneEl.style.color = '#c88830'; }
+    valEl.textContent = 'IDLE'; valEl.style.color = '#c88830';
+  } else {
+    // Zona de aceleração — fill verde (AV) ou vermelho (RÉ)
+    fill.style.top        = val > 0 ? handleCtrY + 'px' : neutralY + 'px';
+    fill.style.height     = val > 0 ? (neutralY - handleCtrY) + 'px' : (handleCtrY - neutralY) + 'px';
+    fill.style.background = val > 0 ? '#26d46a44' : '#e0404444';
+    handle.className      = val > 0 ? 'manete-handle throttle-fwd' : 'manete-handle throttle-rev';
+    const thr  = Math.round(maneteToThrust(val) * 100);
+    const sign = val > 0 ? '+' : '';
+    if (zoneEl) { zoneEl.textContent = val > 0 ? '▲ AVANÇO' : '▼ RÉ'; zoneEl.style.color = val > 0 ? '#26d46a' : '#e04040'; }
+    valEl.textContent = sign + thr + '%'; valEl.style.color = val > 0 ? '#26d46a' : '#e04040';
   }
-
-  const pct = Math.round(val * 100);
-  valEl.textContent = (pct > 0 ? '+' : '') + pct + '%';
-  valEl.style.color = val > 0.02 ? '#26d46a' : val < -0.02 ? '#e04040' : '#4a88b0';
 }
 
 ['port', 'stbd'].forEach(side => {
@@ -2686,6 +2742,7 @@ document.getElementById('btn-play-again').addEventListener('click', () => {
 // START — aplica perfil depois de todas as variáveis declaradas
 // ══════════════════════════════════════════════════
 applyVesselProfile(currentVesselId);
+initManeteDetents();
 gameLoop();
 showStartModal();
 </script>
