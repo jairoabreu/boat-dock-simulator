@@ -256,6 +256,45 @@ header p  { font-size:9px; letter-spacing:1.5px; color:#243a52; margin-top:3px; 
   opacity:0.7;
 }
 
+/* ── HW CONNECT (CAN adapter) ── */
+.hw-section {
+  width:100%; margin-top:4px;
+  border-top:1px solid #0e2336; padding-top:8px;
+  display:flex; flex-direction:column; gap:6px;
+}
+.hw-header {
+  display:flex; align-items:center; gap:6px;
+  font-size:9px; letter-spacing:1.5px; text-transform:uppercase;
+  color:#2a5070; cursor:pointer; user-select:none;
+}
+.hw-dot {
+  width:7px; height:7px; border-radius:50%; flex-shrink:0;
+  background:#1a3550; transition:background .3s;
+}
+.hw-dot.connecting { background:#c88830; animation:pulse-hw .8s infinite alternate; }
+.hw-dot.connected  { background:#2ab860; animation:pulse-hw 2s  infinite alternate; }
+@keyframes pulse-hw { from{opacity:.5} to{opacity:1} }
+.hw-body { display:none; flex-direction:column; gap:5px; }
+.hw-body.open { display:flex; }
+.hw-url-input {
+  background:#07101e; border:1px solid #1a3a52; color:#7aabcf;
+  border-radius:6px; padding:5px 8px; font-size:9px; font-family:monospace;
+  outline:none; width:100%; box-sizing:border-box;
+}
+.hw-url-input:focus { border-color:#2a6080; }
+.hw-btn {
+  align-self:center; padding:4px 16px;
+  background:#07101e; border:1px solid #1a3a52; border-radius:20px;
+  color:#4a8ab0; font-size:9px; letter-spacing:1.5px;
+  text-transform:uppercase; cursor:pointer; transition:border-color .2s, color .2s;
+}
+.hw-btn:hover { border-color:#2a6080; color:#7ab0d0; }
+.hw-btn.connected { border-color:#2ab860; color:#2ab860; }
+.hw-status-txt {
+  text-align:center; font-size:8px; letter-spacing:1px;
+  color:#1e4060; font-family:monospace;
+}
+
 /* ── MODAL ── */
 .modal-overlay {
   position:fixed; inset:0; background:#00000090;
@@ -1373,6 +1412,22 @@ header p  { font-size:9px; letter-spacing:1.5px; color:#243a52; margin-top:3px; 
           </div>
           <div class="manete-zone-lbl" id="manete-stbd-zone">NEUTRO</div>
           <div class="manete-val" id="manete-stbd-val">—</div>
+        </div>
+      </div>
+
+      <!-- Conexão hardware CAN (can_adapter.py) -->
+      <div class="hw-section" id="hw-section">
+        <div class="hw-header" id="hw-header">
+          <span class="hw-dot" id="hw-dot"></span>
+          <span>Hardware CAN</span>
+          <span style="margin-left:auto;font-size:9px;opacity:.5">▸</span>
+        </div>
+        <div class="hw-body" id="hw-body">
+          <input class="hw-url-input" id="hw-url"
+            value="ws://127.0.0.1:8765/stream?ch=virtual:test&bitrate=250000"
+            spellcheck="false">
+          <button class="hw-btn" id="hw-btn">Conectar</button>
+          <div class="hw-status-txt" id="hw-status">desconectado</div>
         </div>
       </div>
     </div>
@@ -2663,6 +2718,94 @@ document.addEventListener('touchend', () => {
   if (h) h.classList.remove('active');
   draggingManete = null;
 });
+
+// ══════════════════════════════════════════════════
+// HARDWARE CAN (can_adapter.py WebSocket)
+// ══════════════════════════════════════════════════
+let hwSocket     = null;
+let hwConnected  = false;
+let hwReconnTimer = null;
+
+function hwSetState(state, msg) {
+  const dot = document.getElementById('hw-dot');
+  const btn = document.getElementById('hw-btn');
+  const txt = document.getElementById('hw-status');
+  dot.className = 'hw-dot ' + (state === 'connected' ? 'connected' : state === 'connecting' ? 'connecting' : '');
+  btn.textContent = state === 'connected' ? 'Desconectar' : 'Conectar';
+  btn.className   = 'hw-btn' + (state === 'connected' ? ' connected' : '');
+  txt.textContent = msg || state;
+  hwConnected = state === 'connected';
+}
+
+function hwConnect() {
+  if (hwSocket) { hwSocket.close(); return; }
+  const url = document.getElementById('hw-url').value.trim();
+  hwSetState('connecting', 'conectando…');
+  hwSocket = new WebSocket(url);
+
+  hwSocket.onopen = () => hwSetState('connected', 'conectado');
+
+  hwSocket.onmessage = (e) => {
+    let msg;
+    try { msg = JSON.parse(e.data); } catch { return; }
+    // Evento navigate da emulação ECU
+    if (msg.type === 'sim' && msg.event === 'navigate') {
+      const gear = msg.gear;      // 0=Neutral 1=Forward 2=Reverse
+      const thr  = (msg.throttle ?? 0) / 100;
+      const val  = gear === 1 ? thr : gear === 2 ? -thr : 0;
+      if (msg.ecu === 'Port')      { manetePort = val; updateManeteVisual('port'); }
+      if (msg.ecu === 'Starboard') { maneteStbd = val; updateManeteVisual('stbd'); }
+      return;
+    }
+    // Frame CAN decodificado com cmd ECUNavigate
+    if (msg.type === 'frame' && msg.mt?.cmd === 'ECUNavigate') {
+      // data hex: [mode][gear][throttle]
+      const bytes = msg.data ? msg.data.match(/.{2}/g)?.map(h => parseInt(h,16)) : null;
+      if (bytes && bytes.length >= 3) {
+        const gear = bytes[1];
+        const thr  = Math.min(bytes[2], 100) / 100;
+        const val  = gear === 1 ? thr : gear === 2 ? -thr : 0;
+        const to   = msg.mt?.to ?? '';
+        if (to === 'Port')      { manetePort = val; updateManeteVisual('port'); }
+        if (to === 'Starboard') { maneteStbd = val; updateManeteVisual('stbd'); }
+      }
+    }
+  };
+
+  hwSocket.onerror = () => hwSetState('', 'erro de conexão');
+
+  hwSocket.onclose = () => {
+    hwSocket = null;
+    hwSetState('', 'desconectado');
+    manetePort = 0; maneteStbd = 0;
+    updateManeteVisual('port'); updateManeteVisual('stbd');
+  };
+}
+
+document.getElementById('hw-header').addEventListener('click', () => {
+  const body = document.getElementById('hw-body');
+  const arrow = document.querySelector('#hw-header span:last-child');
+  const open = body.classList.toggle('open');
+  arrow.textContent = open ? '▾' : '▸';
+});
+
+document.getElementById('hw-btn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  if (hwConnected) {
+    hwSocket?.close();
+  } else {
+    hwConnect();
+  }
+});
+
+// Bloqueia drag enquanto hardware está conectado
+const _origManeteDown = window.__maneteDragDown;
+document.addEventListener('mousedown', (e) => {
+  if (hwConnected && e.target.classList.contains('manete-handle')) e.stopImmediatePropagation();
+}, true);
+document.addEventListener('touchstart', (e) => {
+  if (hwConnected && e.target.classList.contains('manete-handle')) e.stopImmediatePropagation();
+}, { capture: true, passive: false });
 
 // ══════════════════════════════════════════════════
 // JOGADOR + RANKING
