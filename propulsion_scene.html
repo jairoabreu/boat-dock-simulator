@@ -1437,12 +1437,12 @@ header p  { font-size:9px; letter-spacing:1.5px; color:#243a52; margin-top:3px; 
       </div>
       <div class="gain-row">
         <span class="gain-lbl">Bow Thruster</span>
-        <input type="range" class="gain-slider" id="gain-bow" min="5" max="100" value="35" style="--pct:35%">
+        <input type="range" class="gain-slider" id="gain-bow" min="5" max="100" value="20" style="--pct:20%">
         <span class="gain-val" id="gv-bow">35%</span>
       </div>
       <div class="gain-row">
         <span class="gain-lbl">Stern Thruster</span>
-        <input type="range" class="gain-slider" id="gain-stern" min="5" max="100" value="35" style="--pct:35%">
+        <input type="range" class="gain-slider" id="gain-stern" min="5" max="100" value="20" style="--pct:20%">
         <span class="gain-val" id="gv-stern">35%</span>
       </div>
       <div class="gain-row">
@@ -1518,8 +1518,8 @@ const vesselProfiles = {
     windageK: 1.0, currentK: 1.0,
     // Inércia de comando: ~18 t. Tau em frames (60 fps) ≈ atraso até 63% da resposta.
     responseTau: 420,
-    physics: { ACCEL:0.11,  ANG_ACCEL:0.0013, THR_SWAY:0.010,
-               BOW_TORQUE:0.0010, STERN_TORQUE:0.0010,
+    physics: { ACCEL:0.11,  ANG_ACCEL:0.0013, THR_SWAY:0.005,
+               BOW_TORQUE:0.0005, STERN_TORQUE:0.0005,
                PROP_WALK:0.022, DRAG:0.94, ANG_DRAG:0.88,
                FWD_FACTOR_AHEAD:0.40, FWD_FACTOR_ASTERN:1.20 }
   },
@@ -2488,8 +2488,8 @@ function applyVesselProfile(id) {
   };
   resetSlider('gain-surge',    'gv-surge',    35, v => gainSurge    = v);
   resetSlider('gain-yaw',      'gv-yaw',      35, v => gainYaw      = v);
-  resetSlider('gain-bow',      'gv-bow',      35, v => gainBow      = v);
-  resetSlider('gain-stern',    'gv-stern',    35, v => gainStern    = v);
+  resetSlider('gain-bow',      'gv-bow',      20, v => gainBow      = v);
+  resetSlider('gain-stern',    'gv-stern',    20, v => gainStern    = v);
   resetSlider('gain-propwalk', 'gv-propwalk', 25, v => gainPropWalk = v);
 
   // Slider de inércia sincroniza com o responseTau do perfil ativo.
