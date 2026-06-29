@@ -2726,6 +2726,17 @@ let hwSocket     = null;
 let hwConnected  = false;
 let hwReconnTimer = null;
 
+// Converte (gear, throttle) do ECUNavigate → val para maneteToThrust().
+// gear: 0=Neutral 1=Forward 2=Reverse  |  throttle: 0-100
+// Com gear engatado e thr=0, cai na zona ENGAJADO (marcha lenta).
+// Com thr>0, remapeia para a zona ACELERAÇÃO [MANETE_ENGAGE, 1.0].
+function hwGearThrToVal(gear, throttle) {
+  if (gear === 0) return 0;
+  const sgn = gear === 2 ? -1 : 1;
+  if (throttle === 0) return sgn * (MANETE_NEUTRAL + MANETE_ENGAGE) / 2;
+  return sgn * (MANETE_ENGAGE + (throttle / 100) * (1 - MANETE_ENGAGE));
+}
+
 function hwSetState(state, msg) {
   const dot = document.getElementById('hw-dot');
   const btn = document.getElementById('hw-btn');
@@ -2751,8 +2762,7 @@ function hwConnect() {
     // Evento navigate da emulação ECU
     if (msg.type === 'sim' && msg.event === 'navigate') {
       const gear = msg.gear;      // 0=Neutral 1=Forward 2=Reverse
-      const thr  = (msg.throttle ?? 0) / 100;
-      const val  = gear === 1 ? thr : gear === 2 ? -thr : 0;
+      const val  = hwGearThrToVal(gear, msg.throttle ?? 0);
       if (msg.ecu === 'Port')      { manetePort = val; updateManeteVisual('port'); }
       if (msg.ecu === 'Starboard') { maneteStbd = val; updateManeteVisual('stbd'); }
       return;
@@ -2763,8 +2773,7 @@ function hwConnect() {
       const bytes = msg.data ? msg.data.match(/.{2}/g)?.map(h => parseInt(h,16)) : null;
       if (bytes && bytes.length >= 3) {
         const gear = bytes[1];
-        const thr  = Math.min(bytes[2], 100) / 100;
-        const val  = gear === 1 ? thr : gear === 2 ? -thr : 0;
+        const val  = hwGearThrToVal(gear, bytes[2]);
         const to   = msg.mt?.to ?? '';
         if (to === 'Port')      { manetePort = val; updateManeteVisual('port'); }
         if (to === 'Starboard') { maneteStbd = val; updateManeteVisual('stbd'); }
