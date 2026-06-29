@@ -1958,16 +1958,25 @@ function updatePhysics() {
   const fwdX =  Math.sin(h), fwdY = -Math.cos(h); // forward in screen coords
   const sidX =  Math.cos(h), sidY =  Math.sin(h); // starboard in screen coords
 
+  // Modo de controle: joystick passa pelo DP (limita autoridade + filtra inércia);
+  // manetes vão direto ao motor (autoridade total, inércia física apenas).
+  // JOY_AUTHORITY: fração da força máxima que o DP libera (60%).
+  // JOY_INERTIA: multiplicador de tau — o DP adiciona filtragem de comando (1.6×).
+  const JOY_AUTHORITY = 0.60;
+  const JOY_INERTIA   = 1.60;
+  const modeForce = controlMode === 'manetes' ? 1.0 : JOY_AUTHORITY;
+  const modeTau   = controlMode === 'manetes' ? 1.0 : JOY_INERTIA;
+
   // Inércia hidrodinâmica: tau maior = casco mais pesado → aceleração efetiva
   // menor para o mesmo empuxo (f = m·a, massa relativa ≈ tau/30). Isso é o
   // atraso físico da resposta do barco ao comando — o motor continua instantâneo.
-  const tau        = Math.max(1, currentProfile.responseTau || 30);
+  const tau        = Math.max(1, (currentProfile.responseTau || 30) * modeTau);
   const massFactor = Math.max(0.5, Math.min(70, tau / 30));
   const invMass    = 1 / massFactor;
 
-  // Forças dos motores principais — ganho individual por função
-  const netSurge   = (thrust.port + thrust.stbd) / 2 * ACCEL     * gainSurge;
-  const netYawBase = (thrust.port - thrust.stbd) / 2 * ANG_ACCEL * gainYaw;
+  // Forças dos motores principais — ganho individual + autoridade do modo
+  const netSurge   = (thrust.port + thrust.stbd) / 2 * ACCEL     * gainSurge * modeForce;
+  const netYawBase = (thrust.port - thrust.stbd) / 2 * ANG_ACCEL * gainYaw   * modeForce;
 
   // Círculo de giro assimétrico (comportamento real):
   //   Avante → fluxo sobre o leme reduz a taxa de rotação → círculo MAIOR (fator < 1)
