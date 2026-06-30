@@ -1911,21 +1911,25 @@ function pollGamepad() {
 
 function calcThrust() {
   let cmdBow = 0, cmdStern = 0;
+  // Quando HW conectado, thrusters vêm do PGN J1939 (hwBow/hwStern);
+  // caso contrário, dos botões momentâneos da tela.
+  const effBow   = hwConnected ? hwBow   : bowBtn;
+  const effStern = hwConnected ? hwStern : sternBtn;
 
   if (controlMode === 'manetes') {
     // Manetes: curva F-N-R (neutro → engate idle → aceleração 0-100%)
     thrust.port = maneteToThrust(manetePort);
     thrust.stbd = maneteToThrust(maneteStbd);
-    cmdBow   = hasBow   ? clamp(bowBtn,   -1, 1) : 0;
-    cmdStern = hasStern ? clamp(sternBtn, -1, 1) : 0;
+    cmdBow   = hasBow   ? clamp(effBow,   -1, 1) : 0;
+    cmdStern = hasStern ? clamp(effStern, -1, 1) : 0;
   } else {
     // Joystick: lógica por zonas
     const {surge,sway,yaw}=state;
     thrust.port=0; thrust.stbd=0;
     if (Math.abs(yaw)>0.015) {
       thrust.port=clamp(yaw,-1,1); thrust.stbd=clamp(-yaw,-1,1);
-      cmdBow   = clamp(bowBtn,-1,1);
-      cmdStern = clamp(sternBtn,-1,1);
+      cmdBow   = clamp(effBow,-1,1);
+      cmdStern = clamp(effStern,-1,1);
     } else {
       const absSurge=Math.abs(surge), absSway=Math.abs(sway), mag=Math.hypot(surge,sway);
       let joyBow=0, joyStern=0;
@@ -1935,8 +1939,8 @@ function calcThrust() {
         else if (sway<0)             { thrust.stbd=surge; }
         else                         { thrust.port=surge; }
       }
-      cmdBow   = hasBow   ? clamp(joyBow   + bowBtn,  -1,1) : 0;
-      cmdStern = hasStern ? clamp(joyStern + sternBtn, -1,1) : 0;
+      cmdBow   = hasBow   ? clamp(joyBow   + effBow,  -1,1) : 0;
+      cmdStern = hasStern ? clamp(joyStern + effStern, -1,1) : 0;
     }
   }
 
@@ -2287,6 +2291,7 @@ function updateChrono() {
   if (chronoStart === null) {
     const cmdActive = Math.abs(state.surge) > 0.02 || Math.abs(state.sway) > 0.02
                    || Math.abs(state.yaw)   > 0.02 || bowBtn !== 0 || sternBtn !== 0
+                   || hwBow !== 0 || hwStern !== 0
                    || Math.abs(manetePort) > 0.02  || Math.abs(maneteStbd) > 0.02;
     if (cmdActive) {
       chronoStart = now;
@@ -2725,6 +2730,8 @@ document.addEventListener('touchend', () => {
 let hwSocket     = null;
 let hwConnected  = false;
 let hwReconnTimer = null;
+let hwBow   = 0;   // thruster Bow  via PGN J1939 (type:thruster do can_adapter)
+let hwStern = 0;   // thruster Stern
 
 // Converte (gear, throttle) do ECUNavigate → val para maneteToThrust().
 // gear: 0=Neutral 1=Forward 2=Reverse  |  throttle: 0-100
@@ -2767,6 +2774,15 @@ function hwConnect() {
       if (msg.ecu === 'Starboard') { maneteStbd = val; updateManeteVisual('stbd'); }
       return;
     }
+    // Thruster via PGN J1939 (joystick físico acionou bow/stern)
+    // direction: 0=Off 1=Stbd 2=Port  |  power: 0-100
+    if (msg.type === 'thruster') {
+      const pwr = (msg.active && !msg.fault) ? msg.power / 100 : 0;
+      const val = msg.direction === 1 ? pwr : msg.direction === 2 ? -pwr : 0;
+      if (msg.name === 'Bow')   hwBow   = val;
+      if (msg.name === 'Stern') hwStern = val;
+      return;
+    }
     // Frame CAN decodificado com cmd ECUNavigate
     if (msg.type === 'frame' && msg.mt?.cmd === 'ECUNavigate') {
       // data hex: [mode][gear][throttle]
@@ -2787,6 +2803,7 @@ function hwConnect() {
     hwSocket = null;
     hwSetState('', 'desconectado');
     manetePort = 0; maneteStbd = 0;
+    hwBow = 0; hwStern = 0;
     updateManeteVisual('port'); updateManeteVisual('stbd');
   };
 }
