@@ -295,6 +295,63 @@ header p  { font-size:9px; letter-spacing:1.5px; color:#243a52; margin-top:6px; 
   color:#1e4060; font-family:monospace;
 }
 
+/* ── SELEÇÃO DE DIFICULDADE + CONTROLE ── */
+.sel-grid { display:flex; gap:6px; flex-wrap:wrap; justify-content:center; width:100%; }
+.sel-btn {
+  flex:1; min-width:72px; padding:7px 8px;
+  background:#07101e; border:1px solid #1a3a52; border-radius:8px;
+  color:#4a8ab0; font-size:9px; letter-spacing:1px; text-transform:uppercase;
+  cursor:pointer; transition:all .2s; text-align:center; line-height:1.5;
+  font-family:inherit;
+}
+.sel-btn:hover { border-color:#2a6080; }
+.sel-btn.active { background:#0d2235; }
+.sel-btn.active.diff-easy  { border-color:#2ab860; color:#2ab860; }
+.sel-btn.active.diff-mod   { border-color:#e8a030; color:#e8a030; }
+.sel-btn.active.diff-hard  { border-color:#e84040; color:#e84040; }
+.sel-btn.active.diff-custom{ border-color:#4a8ab0; color:#7ab0d0; }
+.sel-btn.active.ctrl-btn   { border-color:#4a8ab0; color:#7ab0d0; }
+.modal-section-lbl {
+  font-size:8px; letter-spacing:2px; color:#1e4060; text-transform:uppercase;
+  text-align:left; width:100%;
+}
+.modal-row { display:flex; justify-content:space-between; align-items:center; width:100%; }
+.link-btn {
+  background:none; border:none; color:#1e4060; font-size:8px;
+  letter-spacing:1px; text-transform:uppercase; cursor:pointer;
+  text-decoration:underline; padding:0; font-family:inherit;
+}
+.link-btn:hover { color:#4a8ab0; }
+/* ── EDITOR DE PERFIS ── */
+.prof-list { display:flex; flex-direction:column; gap:4px; width:100%; max-height:180px; overflow-y:auto; }
+.prof-row {
+  display:flex; align-items:center; gap:6px;
+  background:#07101e; border:1px solid #1a3a52; border-radius:6px; padding:6px 10px;
+}
+.prof-row-name { flex:1; font-size:10px; color:#7ab0d0; }
+.prof-edit-form {
+  display:flex; flex-direction:column; gap:7px; width:100%;
+  background:#07101e; border:1px solid #1a3a52; border-radius:8px; padding:12px;
+}
+.prof-field-row { display:flex; gap:8px; align-items:center; }
+.prof-field-lbl { font-size:9px; color:#2a5070; min-width:65px; }
+.prof-field-input {
+  flex:1; background:#0d1e30; border:1px solid #1a3a52; color:#7ab0d0;
+  border-radius:6px; padding:5px 8px; font-size:11px; outline:none; font-family:inherit;
+}
+.prof-field-input:focus { border-color:#2a6080; }
+.icon-btn {
+  background:#07101e; border:1px solid #1a3a52; border-radius:6px; color:#4a8ab0;
+  font-size:9px; padding:3px 10px; cursor:pointer; letter-spacing:1px;
+  text-transform:uppercase; font-family:inherit; transition:border-color .2s, color .2s;
+}
+.icon-btn:hover { border-color:#2a6080; color:#7ab0d0; }
+.icon-btn.danger:hover { border-color:#e84040; color:#e84040; }
+.ranking-cat-hdr {
+  font-size:8px; letter-spacing:2px; color:#2a5070; text-transform:uppercase;
+  text-align:center; padding:3px 0 6px; border-bottom:1px solid #0e2336; margin-bottom:2px;
+}
+
 /* ── MODAL ── */
 .modal-overlay {
   position:fixed; inset:0; background:#00000090;
@@ -302,6 +359,7 @@ header p  { font-size:9px; letter-spacing:1.5px; color:#243a52; margin-top:6px; 
   z-index:1000; backdrop-filter:blur(5px);
 }
 .modal-overlay.hidden { display:none; }
+.hidden { display:none !important; }
 .modal-box {
   background:#0d1e30; border:1px solid #1a3a52; border-radius:14px;
   padding:28px 32px; min-width:300px; max-width:430px; width:90%;
@@ -1536,9 +1594,20 @@ header p  { font-size:9px; letter-spacing:1.5px; color:#243a52; margin-top:6px; 
 <!-- ═══ MODAL: NOME DO JOGADOR ═══ -->
 <div class="modal-overlay" id="modal-start">
   <div class="modal-box">
-    <div class="modal-title">⚓ Boat Dock Simulator</div>
-    <div class="modal-sub">Marine Telematics — Maneuvering Simulator<br>Digite seu nome para iniciar a manobra</div>
+    <img src="logo-wordmark-white.png" alt="Marine Telematics" style="height:26px;width:auto;display:block;margin:0 auto 2px">
+    <div class="modal-sub" style="margin-bottom:2px">Maneuvering Simulator · Digite seu nome para iniciar</div>
     <input class="modal-input" id="player-name-input" type="text" placeholder="Seu nome" maxlength="24" autocomplete="off">
+    <div class="modal-row">
+      <span class="modal-section-lbl">Dificuldade</span>
+      <button class="link-btn" id="btn-edit-profiles">✎ Editar perfis</button>
+    </div>
+    <div class="sel-grid" id="diff-selector"></div>
+    <div class="modal-section-lbl">Controle</div>
+    <div class="sel-grid" id="ctrl-selector">
+      <button class="sel-btn ctrl-btn" id="ctrl-btn-cm04" data-ctrl="cm04">CM04<br><span style="opacity:.5;font-size:8px">Joystick</span></button>
+      <button class="sel-btn ctrl-btn" id="ctrl-btn-cm05" data-ctrl="cm05">CM05<br><span style="opacity:.5;font-size:8px">EasyDock</span></button>
+      <button class="sel-btn ctrl-btn" id="ctrl-btn-cm300hd" data-ctrl="cm300hd">CM300HD<br><span style="opacity:.5;font-size:8px">Manetes</span></button>
+    </div>
     <button class="modal-btn-primary" id="btn-start-game">▶ Iniciar Manobra</button>
   </div>
 </div>
@@ -1554,6 +1623,49 @@ header p  { font-size:9px; letter-spacing:1.5px; color:#243a52; margin-top:6px; 
     <div class="ranking-list" id="finish-ranking"></div>
     <div class="ranking-divider"></div>
     <button class="modal-btn-primary" id="btn-play-again">↺ Jogar Novamente</button>
+  </div>
+</div>
+
+<!-- ═══ MODAL: EDITOR DE PERFIS ═══ -->
+<div class="modal-overlay hidden" id="modal-profiles">
+  <div class="modal-box">
+    <div class="modal-title">Perfis de Dificuldade</div>
+    <div class="modal-sub" style="margin-bottom:4px">Vento e maré aplicados no início de cada manobra</div>
+    <div class="prof-list" id="prof-list-container"></div>
+    <div class="prof-edit-form hidden" id="prof-edit-form">
+      <div class="prof-field-row">
+        <span class="prof-field-lbl">Nome</span>
+        <input class="prof-field-input" id="pf-name" maxlength="20" placeholder="Nome do perfil">
+      </div>
+      <div class="prof-field-row">
+        <span class="prof-field-lbl">Vento — dir.</span>
+        <input class="prof-field-input" id="pf-wind-dir" type="number" min="0" max="359" placeholder="0–359">
+        <span style="font-size:9px;color:#2a5070">°</span>
+      </div>
+      <div class="prof-field-row">
+        <span class="prof-field-lbl">Vento — int.</span>
+        <input class="prof-field-input" id="pf-wind-spd" type="number" min="0" max="100" placeholder="0–100">
+        <span style="font-size:9px;color:#2a5070">%</span>
+      </div>
+      <div class="prof-field-row">
+        <span class="prof-field-lbl">Maré — dir.</span>
+        <input class="prof-field-input" id="pf-cur-dir" type="number" min="0" max="359" placeholder="0–359">
+        <span style="font-size:9px;color:#2a5070">°</span>
+      </div>
+      <div class="prof-field-row">
+        <span class="prof-field-lbl">Maré — int.</span>
+        <input class="prof-field-input" id="pf-cur-spd" type="number" min="0" max="100" placeholder="0–100">
+        <span style="font-size:9px;color:#2a5070">%</span>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:center">
+        <button class="icon-btn" id="pf-save-btn">Salvar</button>
+        <button class="icon-btn" id="pf-cancel-btn">Cancelar</button>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:center;margin-top:6px">
+      <button class="icon-btn" id="pf-add-btn">+ Novo perfil</button>
+      <button class="modal-btn-secondary" id="btn-close-profiles">Fechar</button>
+    </div>
   </div>
 </div>
 
@@ -2834,10 +2946,183 @@ document.addEventListener('touchstart', (e) => {
 }, { capture: true, passive: false });
 
 // ══════════════════════════════════════════════════
-// JOGADOR + RANKING
+// PERFIS DE DIFICULDADE
 // ══════════════════════════════════════════════════
+const DIFF_PROFILES_KEY = 'matel-diff-profiles-v1';
+const BUILTIN_DIFF = [
+  { id:'calmo',    name:'Calmo',    locked:true,  windDir:0,   windSpd:0,  curDir:0,   curSpd:0  },
+  { id:'moderado', name:'Moderado', locked:true,  windDir:225, windSpd:40, curDir:90,  curSpd:25 },
+  { id:'dificil',  name:'Difícil',  locked:true,  windDir:270, windSpd:75, curDir:180, curSpd:60 },
+];
+let diffProfiles = [];
+let selectedDiffId  = 'calmo';
+let selectedCtrlType = 'cm300hd';   // 'cm04' | 'cm05' | 'cm300hd'
+const CTRL_LABELS = { cm04:'CM04 Joystick', cm05:'CM05 EasyDock', cm300hd:'CM300HD Manetes' };
+
+function loadDiffProfiles() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(DIFF_PROFILES_KEY) || 'null');
+    const custom = stored ? stored.filter(p => !p.locked) : [];
+    diffProfiles = [...BUILTIN_DIFF, ...custom];
+  } catch { diffProfiles = [...BUILTIN_DIFF]; }
+}
+function saveDiffProfiles() {
+  localStorage.setItem(DIFF_PROFILES_KEY, JSON.stringify(diffProfiles.filter(p => !p.locked)));
+}
+function getDiffProfile(id) {
+  return diffProfiles.find(p => p.id === id) || diffProfiles[0];
+}
+
+function diffColorClass(p) {
+  if (p.id === 'calmo')    return 'diff-easy';
+  if (p.id === 'moderado') return 'diff-mod';
+  if (p.id === 'dificil')  return 'diff-hard';
+  return 'diff-custom';
+}
+
+function renderDiffSelector() {
+  const container = document.getElementById('diff-selector');
+  if (!container) return;
+  container.innerHTML = '';
+  diffProfiles.forEach(p => {
+    const btn = document.createElement('button');
+    const cc  = diffColorClass(p);
+    btn.className = 'sel-btn ' + cc + (p.id === selectedDiffId ? ' active' : '');
+    const windTxt = p.windSpd > 0 ? `💨${p.windSpd}%` : '💨—';
+    const curTxt  = p.curSpd  > 0 ? `🌊${p.curSpd}%`  : '🌊—';
+    btn.innerHTML = `<strong style="font-size:10px">${p.name}</strong><br>`
+                  + `<span style="opacity:.55;font-size:8px">${windTxt} ${curTxt}</span>`;
+    btn.onclick = () => { selectedDiffId = p.id; renderDiffSelector(); };
+    container.appendChild(btn);
+  });
+}
+
+function selectCtrl(type) {
+  selectedCtrlType = type;
+  document.querySelectorAll('.ctrl-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.ctrl === type);
+  });
+}
+
+// ── Funções de troca de modo de controle ──
+function switchToJoystick() {
+  if (controlMode === 'joystick') return;
+  controlMode = 'joystick';
+  document.getElementById('tab-joystick').classList.add('active');
+  document.getElementById('tab-manetes').classList.remove('active');
+  document.getElementById('ctrl-joystick').style.display = '';
+  document.getElementById('ctrl-manetes').style.display = 'none';
+  document.getElementById('gamepad-wrap').style.display = '';
+  manetePort = 0; maneteStbd = 0;
+  updateManeteVisual('port'); updateManeteVisual('stbd');
+}
+function switchToManetes() {
+  if (controlMode === 'manetes') return;
+  controlMode = 'manetes';
+  document.getElementById('tab-manetes').classList.add('active');
+  document.getElementById('tab-joystick').classList.remove('active');
+  document.getElementById('ctrl-joystick').style.display = 'none';
+  document.getElementById('ctrl-manetes').style.display = '';
+  document.getElementById('gamepad-wrap').style.display = 'none';
+  state.surge = 0; state.sway = 0; state.yaw = 0;
+  joyHandle.style.transform = 'translate(-50%,-50%)';
+}
+
+// ── Profile editor ──
+let editingProfileId = null;
+
+function renderProfList() {
+  const container = document.getElementById('prof-list-container');
+  if (!container) return;
+  container.innerHTML = '';
+  diffProfiles.forEach(p => {
+    const row = document.createElement('div');
+    row.className = 'prof-row';
+    const windTxt = p.windSpd > 0 ? `💨 ${dirLabel(p.windDir)} ${p.windSpd}%` : '💨 sem vento';
+    const curTxt  = p.curSpd  > 0 ? `🌊 ${dirLabel(p.curDir)} ${p.curSpd}%`  : '🌊 sem maré';
+    row.innerHTML = `<span class="prof-row-name">${p.name}<br>`
+      + `<span style="font-size:8px;color:#1e4060">${windTxt} · ${curTxt}</span></span>`;
+    if (!p.locked) {
+      const eb = document.createElement('button'); eb.className = 'icon-btn';
+      eb.textContent = 'Editar'; eb.onclick = () => openEditForm(p.id);
+      const db = document.createElement('button'); db.className = 'icon-btn danger';
+      db.textContent = '✕'; db.onclick = () => deleteDiffProfile(p.id);
+      row.appendChild(eb); row.appendChild(db);
+    } else {
+      const lbl = document.createElement('span');
+      lbl.style.cssText = 'font-size:8px;color:#1a3050;letter-spacing:1px';
+      lbl.textContent = 'padrão';
+      row.appendChild(lbl);
+    }
+    container.appendChild(row);
+  });
+}
+
+function openEditForm(id) {
+  editingProfileId = id;
+  const p = id ? getDiffProfile(id) : null;
+  document.getElementById('pf-name').value     = p?.name    ?? '';
+  document.getElementById('pf-wind-dir').value = p?.windDir ?? 0;
+  document.getElementById('pf-wind-spd').value = p?.windSpd ?? 0;
+  document.getElementById('pf-cur-dir').value  = p?.curDir  ?? 0;
+  document.getElementById('pf-cur-spd').value  = p?.curSpd  ?? 0;
+  document.getElementById('prof-edit-form').classList.remove('hidden');
+}
+
+function saveEditForm() {
+  const name = document.getElementById('pf-name').value.trim();
+  if (!name) { document.getElementById('pf-name').focus(); return; }
+  const data = {
+    id:      editingProfileId || ('custom_' + Date.now()),
+    name,
+    locked:  false,
+    windDir: +document.getElementById('pf-wind-dir').value || 0,
+    windSpd: Math.min(100, Math.max(0, +document.getElementById('pf-wind-spd').value || 0)),
+    curDir:  +document.getElementById('pf-cur-dir').value  || 0,
+    curSpd:  Math.min(100, Math.max(0, +document.getElementById('pf-cur-spd').value  || 0)),
+  };
+  if (editingProfileId) {
+    const idx = diffProfiles.findIndex(p => p.id === editingProfileId);
+    if (idx >= 0) diffProfiles[idx] = data;
+  } else {
+    diffProfiles.push(data);
+  }
+  saveDiffProfiles();
+  document.getElementById('prof-edit-form').classList.add('hidden');
+  renderProfList();
+}
+
+function deleteDiffProfile(id) {
+  diffProfiles = diffProfiles.filter(p => p.id !== id);
+  if (selectedDiffId === id) selectedDiffId = diffProfiles[0]?.id ?? 'calmo';
+  saveDiffProfiles();
+  renderProfList();
+}
+
+document.getElementById('btn-edit-profiles').addEventListener('click', () => {
+  renderProfList();
+  document.getElementById('prof-edit-form').classList.add('hidden');
+  document.getElementById('modal-profiles').classList.remove('hidden');
+});
+document.getElementById('btn-close-profiles').addEventListener('click', () => {
+  document.getElementById('modal-profiles').classList.add('hidden');
+  renderDiffSelector();
+});
+document.getElementById('pf-add-btn').addEventListener('click', () => {
+  openEditForm(null);
+  editingProfileId = null;
+});
+document.getElementById('pf-save-btn').addEventListener('click', saveEditForm);
+document.getElementById('pf-cancel-btn').addEventListener('click', () => {
+  document.getElementById('prof-edit-form').classList.add('hidden');
+});
+document.querySelectorAll('.ctrl-btn').forEach(b => {
+  b.addEventListener('click', () => selectCtrl(b.dataset.ctrl));
+});
+
+// ── Ranking ──
 let currentPlayer = '';
-const RANKING_KEY = 'boat-dock-ranking-v1';
+const RANKING_KEY = 'matel-ranking-v2';
 
 function loadRanking() {
   try { return JSON.parse(localStorage.getItem(RANKING_KEY) || '[]'); }
@@ -2847,17 +3132,26 @@ function saveRanking(entries) {
   localStorage.setItem(RANKING_KEY, JSON.stringify(entries));
 }
 function addRankingEntry(name, ms) {
-  const entries = loadRanking();
-  entries.push({ name, ms, vessel: vesselProfiles[currentVesselId].name });
-  entries.sort((a, b) => a.ms - b.ms);
-  const top = entries.slice(0, 20);
-  saveRanking(top);
-  return top;
+  const all = loadRanking();
+  const entry = {
+    name, ms,
+    difficulty: getDiffProfile(selectedDiffId).name,
+    control:    selectedCtrlType,
+    vessel:     vesselProfiles[currentVesselId]?.name ?? '',
+  };
+  all.push(entry);
+  all.sort((a, b) => a.ms - b.ms);
+  saveRanking(all.slice(0, 200));
+  return all
+    .filter(e => e.difficulty === entry.difficulty && e.control === entry.control)
+    .slice(0, 10);
 }
 function renderRanking(container, entries, highlightMs) {
-  container.innerHTML = '';
+  const dp = getDiffProfile(selectedDiffId);
+  const ctrlLbl = CTRL_LABELS[selectedCtrlType] || selectedCtrlType;
+  container.innerHTML = `<div class="ranking-cat-hdr">${dp.name} · ${ctrlLbl}</div>`;
   if (!entries.length) {
-    container.innerHTML = '<div style="text-align:center;color:#1e4060;font-size:11px;padding:12px">Nenhuma atracação registrada</div>';
+    container.innerHTML += '<div style="text-align:center;color:#1e4060;font-size:11px;padding:10px">Sem registros nesta categoria</div>';
     return;
   }
   entries.forEach((e, i) => {
@@ -2872,22 +3166,42 @@ function renderRanking(container, entries, highlightMs) {
   });
 }
 
-const startModal       = document.getElementById('modal-start');
-const playerNameInput  = document.getElementById('player-name-input');
-const finishModal      = document.getElementById('modal-finish');
-const finishTimeEl     = document.getElementById('finish-time');
-const finishRankingEl  = document.getElementById('finish-ranking');
+// ── Modais ──
+const startModal      = document.getElementById('modal-start');
+const playerNameInput = document.getElementById('player-name-input');
+const finishModal     = document.getElementById('modal-finish');
+const finishTimeEl    = document.getElementById('finish-time');
+const finishRankingEl = document.getElementById('finish-ranking');
 
 function showStartModal() {
+  loadDiffProfiles();
+  renderDiffSelector();
+  selectCtrl(selectedCtrlType);
   startModal.classList.remove('hidden');
   setTimeout(() => playerNameInput.focus(), 80);
 }
+
 function hideStartModal() {
   const name = playerNameInput.value.trim();
   if (!name) { playerNameInput.focus(); return; }
   currentPlayer = name;
+
+  // Aplica perfil de dificuldade
+  const dp = getDiffProfile(selectedDiffId);
+  windDir = dp.windDir;
+  windSpd = dp.windSpd / 100;
+  curDir  = dp.curDir;
+  curSpd  = dp.curSpd  / 100;
+  refreshEnvIndicator();
+
+  // Aplica tipo de controle
+  if (selectedCtrlType === 'cm300hd') {
+    switchToManetes();
+  } else {
+    switchToJoystick();
+  }
+
   startModal.classList.add('hidden');
-  // Reposiciona barco e zera tudo para a nova tentativa
   boat.x = DOCK.x; boat.y = DOCK.y; boat.heading = DOCK.heading;
   boat.vx = 0; boat.vy = 0; boat.vr = 0;
   wakePoints.length = 0;
@@ -2899,6 +3213,7 @@ function hideStartModal() {
   document.querySelectorAll('.thr-btn').forEach(b => b.classList.remove('active'));
   chronoReset();
 }
+
 function showFinishModal(ms) {
   if (!currentPlayer) return;
   const entries = addRankingEntry(currentPlayer, ms);
