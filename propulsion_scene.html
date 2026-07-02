@@ -83,6 +83,23 @@ header p  { font-size:9px; letter-spacing:1.5px; color:#243a52; margin-top:6px; 
   box-shadow:0 2px 10px #00000099;
 }
 .chrono-lbl { font-size:8px; letter-spacing:2px; color:#1e4060; text-transform:uppercase; }
+.btn-pause {
+  position:absolute; top:10px; right:96px; z-index:10;
+  width:42px; height:42px; border-radius:8px;
+  background:#0a1624ee; border:1px solid #1a3a52; color:#4a8ab0;
+  font-size:15px; cursor:pointer; box-shadow:0 2px 10px #00000099;
+  transition:border-color .2s, color .2s;
+}
+.btn-pause:hover { border-color:#2a6080; color:#7ab0d0; }
+.pause-overlay {
+  position:absolute; inset:0; z-index:50;
+  background:#050c16d8; backdrop-filter:blur(3px);
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px;
+}
+.pause-overlay .pause-lbl {
+  font-size:16px; letter-spacing:6px; color:#4a8ab0; text-transform:uppercase;
+}
+.pause-overlay .pause-sub { font-size:9px; letter-spacing:2px; color:#2a5070; text-transform:uppercase; }
 .chrono-val { font-size:20px; font-weight:600; font-variant-numeric:tabular-nums;
               color:#4a88b0; line-height:1.1; }
 .chrono.running .chrono-val { color:#e8c850; }
@@ -431,6 +448,14 @@ header p  { font-size:9px; letter-spacing:1.5px; color:#243a52; margin-top:6px; 
       <div class="chrono" id="chrono">
         <div class="chrono-lbl">Tempo</div>
         <div class="chrono-val" id="chrono-val">00:00.0</div>
+      </div>
+      <button class="btn-pause" id="btn-pause" title="Pausar (P)">⏸</button>
+
+      <!-- Overlay de pausa -->
+      <div class="pause-overlay hidden" id="pause-overlay">
+        <div class="pause-lbl">⏸ Pausado</div>
+        <div class="pause-sub">cronômetro parado</div>
+        <button class="modal-btn-primary" id="btn-resume" style="width:220px">▶ Continuar</button>
       </div>
 
       <!-- Background: water + pier -->
@@ -2386,6 +2411,7 @@ function chronoReset() {
   chronoStart = null; chronoEnd = null; dockHoldMs = 0;
   chronoEl.classList.remove('running','done');
   chronoValEl.textContent = '00:00.0';
+  if (typeof setPaused === 'function') setPaused(false);
 }
 function fmtChrono(ms) {
   const s = ms / 1000;
@@ -2538,17 +2564,47 @@ function updateReadouts() {
 // ══════════════════════════════════════════════════
 // GAME LOOP
 // ══════════════════════════════════════════════════
+// ── Pause ──
+let paused = false, pauseStartMs = 0;
+
+function setPaused(p) {
+  if (p === paused) return;
+  paused = p;
+  const ov  = document.getElementById('pause-overlay');
+  const btn = document.getElementById('btn-pause');
+  if (p) {
+    pauseStartMs = performance.now();
+    ov.classList.remove('hidden');
+    btn.textContent = '▶';
+  } else {
+    // Desconta o tempo pausado: o cronômetro continua de onde parou
+    const dur = performance.now() - pauseStartMs;
+    if (chronoStart !== null && chronoEnd === null) chronoStart += dur;
+    prevFrameMs = performance.now();
+    ov.classList.add('hidden');
+    btn.textContent = '⏸';
+  }
+}
+
+document.getElementById('btn-pause').addEventListener('click', () => setPaused(!paused));
+document.getElementById('btn-resume').addEventListener('click', () => setPaused(false));
+document.addEventListener('keydown', e => {
+  if ((e.key === 'p' || e.key === 'P') && e.target.tagName !== 'INPUT') setPaused(!paused);
+});
+
 function gameLoop() {
-  pollGamepad();
-  calcThrust();
-  updatePhysics();
-  updateBoatTransform();
-  updateOverlay();
-  updateAnims();
-  updateReadouts();
-  updateRotViz();
-  updateInfoOverlay();
-  updateChrono();
+  if (!paused) {
+    pollGamepad();
+    calcThrust();
+    updatePhysics();
+    updateBoatTransform();
+    updateOverlay();
+    updateAnims();
+    updateReadouts();
+    updateRotViz();
+    updateInfoOverlay();
+    updateChrono();
+  }
   requestAnimationFrame(gameLoop);
 }
 
