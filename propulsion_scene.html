@@ -2964,6 +2964,36 @@ function hwSetState(state, msg) {
   hwConnected = state === 'connected';
 }
 
+// Quem está comandando no barramento (campo `by` dos eventos / `master` do
+// snapshot) → categoria de controle do ranking. Nomes do dicionário ADDR do
+// adaptador: Joystick=0x24, Manet1-3=CM300HD (postos CM01), CM06/CM06-1A=CM05.
+const HW_SOURCE_CTRL = {
+  'Joystick': 'cm04',
+  'Manet1': 'cm300hd', 'Manet2': 'cm300hd', 'Manet3': 'cm300hd',
+  'CM06': 'cm05', 'CM06-1A': 'cm05',
+};
+let hwActiveSource = null;
+
+function hwSetSource(by) {
+  const ctrl = HW_SOURCE_CTRL[by];
+  if (!ctrl || by === hwActiveSource) return;
+  hwActiveSource = by;
+  // Ranking passa a registrar na categoria do posto que está comandando
+  if (ctrl !== selectedCtrlType) selectCtrl(ctrl);
+  // Com HW comandando, a propulsão entra pelo caminho das manetes
+  // (hwApplyNav → manetePort/maneteStbd), seja joystick, CM05 ou manete física
+  switchToManetes();
+  document.getElementById('hw-status').textContent =
+    'conectado — comandando: ' + by + ' (' + (CTRL_LABELS[ctrl] || ctrl) + ')';
+}
+
+// Aplica um comando de propulsão vindo do hardware a uma ECU (Port/Starboard)
+function hwApplyNav(ecu, gear, throttle) {
+  const val = hwGearThrToVal(gear, throttle);
+  if (ecu === 'Port')      { manetePort = val; updateManeteVisual('port'); }
+  if (ecu === 'Starboard') { maneteStbd = val; updateManeteVisual('stbd'); }
+}
+
 function hwConnect() {
   if (hwSocket) { hwSocket.close(); return; }
   const url = document.getElementById('hw-url').value.trim();
@@ -2975,41 +3005,55 @@ function hwConnect() {
   hwSocket.onmessage = (e) => {
     let msg;
     try { msg = JSON.parse(e.data); } catch { return; }
-    // Evento navigate da emulação ECU
-    if (msg.type === 'sim' && msg.event === 'navigate') {
-      const gear = msg.gear;      // 0=Neutral 1=Forward 2=Reverse
-      const val  = hwGearThrToVal(gear, msg.throttle ?? 0);
-      if (msg.ecu === 'Port')      { manetePort = val; updateManeteVisual('port'); }
-      if (msg.ecu === 'Starboard') { maneteStbd = val; updateManeteVisual('stbd'); }
+
+    // Eventos das ECUs emuladas
+    if (msg.type === 'sim') {
+      if (msg.event === 'navigate') {
+        // by = quem está comandando (Joystick / Manet1-3 / CM06)
+        hwSetSource(msg.by);
+        hwApplyNav(msg.ecu, msg.gear, msg.throttle ?? 0);
+      } else if (msg.event === 'auto_engage' || msg.event === 'engage') {
+        hwSetSource(msg.by);
+      } else if (msg.event === 'watchdog_disengage') {
+        // Posto sumiu (1 s sem comando): ECU foi pra posição segura → zera o lado
+        hwApplyNav(msg.ecu, 0, 0);
+      } else if (msg.event === 'ctr_transfer_proxy') {
+        // Outro posto tomou o comando do joystick via MTCP
+        hwSetSource(msg.by);
+      }
+      // navigate_ignored / thruster_ignored: comando recusado — nada a aplicar
       return;
     }
-    // Thruster via PGN J1939 (joystick físico acionou bow/stern)
+
+    // Thruster bow/stern — PGN J1939 do joystick OU THRC do CM06 (power 0/100).
+    // O gate de master é do adaptador: o que chega aqui já é o comando válido.
     // direction: 0=Off 1=Stbd 2=Port  |  power: 0-100
     if (msg.type === 'thruster') {
       const pwr = (msg.active && !msg.fault) ? msg.power / 100 : 0;
       const val = msg.direction === 1 ? pwr : msg.direction === 2 ? -pwr : 0;
       if (msg.name === 'Bow')   hwBow   = val;
       if (msg.name === 'Stern') hwStern = val;
+      if (val !== 0) hwSetSource(msg.by);
       return;
     }
-    // Frame CAN decodificado com cmd ECUNavigate
-    if (msg.type === 'frame' && msg.mt?.cmd === 'ECUNavigate') {
-      // data hex: [mode][gear][throttle]
-      const bytes = msg.data ? msg.data.match(/.{2}/g)?.map(h => parseInt(h,16)) : null;
-      if (bytes && bytes.length >= 3) {
-        const gear = bytes[1];
-        const val  = hwGearThrToVal(gear, bytes[2]);
-        const to   = msg.mt?.to ?? '';
-        if (to === 'Port')      { manetePort = val; updateManeteVisual('port'); }
-        if (to === 'Starboard') { maneteStbd = val; updateManeteVisual('stbd'); }
-      }
+
+    // Snapshot periódico (~1 Hz): sincroniza estado mesmo sem tráfego de eventos
+    if (msg.type === 'state' && msg.ecus) {
+      if (msg.master) hwSetSource(msg.master);
+      const p = msg.ecus.Port, s = msg.ecus.Starboard;
+      if (p) hwApplyNav('Port',      p.gear, p.throttle);
+      if (s) hwApplyNav('Starboard', s.gear, s.throttle);
+      return;
     }
+
+    // deck (âncora/buzina) e frames crus: sem efeito na manobra
   };
 
   hwSocket.onerror = () => hwSetState('', 'erro de conexão');
 
   hwSocket.onclose = () => {
     hwSocket = null;
+    hwActiveSource = null;
     hwSetState('', 'desconectado');
     manetePort = 0; maneteStbd = 0;
     hwBow = 0; hwStern = 0;
