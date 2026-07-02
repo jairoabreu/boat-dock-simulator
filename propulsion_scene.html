@@ -3048,8 +3048,10 @@ document.addEventListener('touchstart', (e) => {
 const DIFF_PROFILES_KEY = 'matel-diff-profiles-v1';
 const BUILTIN_DIFF = [
   { id:'calmo',    name:'Calmo',    locked:true,  windDir:0,   windSpd:0,  curDir:0,   curSpd:0  },
-  { id:'moderado', name:'Moderado', locked:true,  windDir:225, windSpd:40, curDir:90,  curSpd:25 },
-  { id:'dificil',  name:'Difícil',  locked:true,  windDir:270, windSpd:75, curDir:180, curSpd:60 },
+  { id:'moderado', name:'Moderado', locked:true,  windDir:225, windSpd:18, curDir:90,  curSpd:12 },
+  { id:'dificil',  name:'Difícil',  locked:true,  windDir:270, windSpd:38, curDir:180, curSpd:28 },
+  // Manual: não sobrescreve nada — usa o que estiver nos sliders de Ambiente
+  { id:'manual',   name:'Manual',   locked:true,  manual:true },
 ];
 let diffProfiles = [];
 let selectedDiffId  = 'calmo';
@@ -3070,6 +3072,21 @@ function getDiffProfile(id) {
   return diffProfiles.find(p => p.id === id) || diffProfiles[0];
 }
 
+// Escreve nos sliders de Ambiente e dispara 'input' — os handlers cuidam de
+// atualizar windDir/windSpd/curDir/curSpd, labels, --pct e o indicador.
+function setEnvSliders(wDir, wSpd, cDir, cSpd) {
+  const pairs = [
+    ['env-wind-dir', wDir], ['env-wind-spd', wSpd],
+    ['env-cur-dir',  cDir], ['env-cur-spd',  cSpd],
+  ];
+  for (const [id, v] of pairs) {
+    const sl = document.getElementById(id);
+    if (!sl) continue;
+    sl.value = v;
+    sl.dispatchEvent(new Event('input'));
+  }
+}
+
 function diffColorClass(p) {
   if (p.id === 'calmo')    return 'diff-easy';
   if (p.id === 'moderado') return 'diff-mod';
@@ -3085,10 +3102,11 @@ function renderDiffSelector() {
     const btn = document.createElement('button');
     const cc  = diffColorClass(p);
     btn.className = 'sel-btn ' + cc + (p.id === selectedDiffId ? ' active' : '');
-    const windTxt = p.windSpd > 0 ? `💨${p.windSpd}%` : '💨—';
-    const curTxt  = p.curSpd  > 0 ? `🌊${p.curSpd}%`  : '🌊—';
+    const sub = p.manual
+      ? '🎛 usa os sliders'
+      : `${p.windSpd > 0 ? '💨' + p.windSpd + '%' : '💨—'} ${p.curSpd > 0 ? '🌊' + p.curSpd + '%' : '🌊—'}`;
     btn.innerHTML = `<strong style="font-size:10px">${p.name}</strong><br>`
-                  + `<span style="opacity:.55;font-size:8px">${windTxt} ${curTxt}</span>`;
+                  + `<span style="opacity:.55;font-size:8px">${sub}</span>`;
     btn.onclick = () => { selectedDiffId = p.id; renderDiffSelector(); };
     container.appendChild(btn);
   });
@@ -3135,10 +3153,13 @@ function renderProfList() {
   diffProfiles.forEach(p => {
     const row = document.createElement('div');
     row.className = 'prof-row';
-    const windTxt = p.windSpd > 0 ? `💨 ${dirLabel(p.windDir)} ${p.windSpd}%` : '💨 sem vento';
-    const curTxt  = p.curSpd  > 0 ? `🌊 ${dirLabel(p.curDir)} ${p.curSpd}%`  : '🌊 sem maré';
+    const detail = p.manual
+      ? '🎛 definido pelos sliders de Ambiente'
+      : (p.windSpd > 0 ? `💨 ${dirLabel(p.windDir)} ${p.windSpd}%` : '💨 sem vento')
+        + ' · '
+        + (p.curSpd > 0 ? `🌊 ${dirLabel(p.curDir)} ${p.curSpd}%` : '🌊 sem maré');
     row.innerHTML = `<span class="prof-row-name">${p.name}<br>`
-      + `<span style="font-size:8px;color:#1e4060">${windTxt} · ${curTxt}</span></span>`;
+      + `<span style="font-size:8px;color:#1e4060">${detail}</span></span>`;
     if (!p.locked) {
       const eb = document.createElement('button'); eb.className = 'icon-btn';
       eb.textContent = 'Editar'; eb.onclick = () => openEditForm(p.id);
@@ -3283,13 +3304,14 @@ function hideStartModal() {
   if (!name) { playerNameInput.focus(); return; }
   currentPlayer = name;
 
-  // Aplica perfil de dificuldade
+  // Aplica perfil de dificuldade. Os sliders de Ambiente são a fonte de
+  // verdade: o perfil escreve neles (com evento input, que atualiza windDir/
+  // windSpd/curDir/curSpd, labels e indicador). Manual não escreve nada —
+  // vale o que o usuário deixou nos sliders.
   const dp = getDiffProfile(selectedDiffId);
-  windDir = dp.windDir;
-  windSpd = dp.windSpd / 100;
-  curDir  = dp.curDir;
-  curSpd  = dp.curSpd  / 100;
-  refreshEnvIndicator();
+  if (!dp.manual) {
+    setEnvSliders(dp.windDir, dp.windSpd, dp.curDir, dp.curSpd);
+  }
 
   // Aplica tipo de controle
   if (selectedCtrlType === 'cm300hd') {
