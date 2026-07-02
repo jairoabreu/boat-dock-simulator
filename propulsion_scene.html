@@ -1651,6 +1651,16 @@ header p  { font-size:9px; letter-spacing:1.5px; color:#243a52; margin-top:6px; 
   </div>
 </div>
 
+<!-- ═══ MODAL: GAME OVER (colisão) ═══ -->
+<div class="modal-overlay hidden" id="modal-gameover">
+  <div class="modal-box" style="border-color:#5a1a1a">
+    <div class="modal-title" style="color:#e84040">💥 Colisão!</div>
+    <div class="dock-result-time" style="color:#e84040;font-size:22px">GAME OVER</div>
+    <div class="modal-sub" id="gameover-reason">Você esbarrou na doca. A manobra foi encerrada.</div>
+    <button class="modal-btn-primary" id="btn-retry">↺ Tentar Novamente</button>
+  </div>
+</div>
+
 <!-- ═══ MODAL: EDITOR DE PERFIS ═══ -->
 <div class="modal-overlay hidden" id="modal-profiles">
   <div class="modal-box">
@@ -2122,6 +2132,7 @@ const boat = { x:DOCK.x, y:DOCK.y, heading:DOCK.heading, vx:0, vy:0, vr:0 };
 const FINGER_INSET_TIP  = 10;
 const FINGER_INSET_SIDE = 11;  // 28 tall → 6 tall de colisão efetiva
 const HULL_PAD = 3;            // folga extra no casco (px subtraídos de extX/extY)
+const GAMEOVER_IMPACT = 0.5;   // px/frame — impacto acima disso = game over (abaixo = raspão nas defensas)
 const OBSTACLES = [
   // ── Marina oeste (quay x=6-70 y=40-540; 4 fingers visuais x=70-230) ──
   { x: 6,   y: 40,  w: 64,  h: 500, type: 'quay'   },
@@ -2269,11 +2280,16 @@ function updatePhysics() {
       const graze = minPen < 1.5;
       const resti = graze ? 0 : 0.2;
       const damp  = graze ? 0.4 : 1.0;
-      if (minPen === penRight)      { boat.x = o.x + o.w + extX; if (boat.vx < 0) boat.vx = Math.abs(boat.vx) * resti;  else boat.vx *= damp; }
-      else if (minPen === penLeft)  { boat.x = o.x - extX;       if (boat.vx > 0) boat.vx = -Math.abs(boat.vx) * resti; else boat.vx *= damp; }
-      else if (minPen === penDown)  { boat.y = o.y + o.h + extY; if (boat.vy < 0) boat.vy = Math.abs(boat.vy) * resti;  else boat.vy *= damp; }
-      else                          { boat.y = o.y - extY;       if (boat.vy > 0) boat.vy = -Math.abs(boat.vy) * resti; else boat.vy *= damp; }
+      // Velocidade de impacto: componente da velocidade na direção do contato
+      // (só conta se movendo PARA o obstáculo). Toque lento nas defensas =
+      // raspão tolerado; acima do limiar = colisão real → game over.
+      let impactSpd = 0;
+      if (minPen === penRight)      { impactSpd = boat.vx < 0 ? -boat.vx : 0; boat.x = o.x + o.w + extX; if (boat.vx < 0) boat.vx = Math.abs(boat.vx) * resti;  else boat.vx *= damp; }
+      else if (minPen === penLeft)  { impactSpd = boat.vx > 0 ?  boat.vx : 0; boat.x = o.x - extX;       if (boat.vx > 0) boat.vx = -Math.abs(boat.vx) * resti; else boat.vx *= damp; }
+      else if (minPen === penDown)  { impactSpd = boat.vy < 0 ? -boat.vy : 0; boat.y = o.y + o.h + extY; if (boat.vy < 0) boat.vy = Math.abs(boat.vy) * resti;  else boat.vy *= damp; }
+      else                          { impactSpd = boat.vy > 0 ?  boat.vy : 0; boat.y = o.y - extY;       if (boat.vy > 0) boat.vy = -Math.abs(boat.vy) * resti; else boat.vy *= damp; }
       boat.vr *= graze ? 0.85 : 0.5;
+      if (impactSpd > GAMEOVER_IMPACT && !gameOver && chronoEnd === null) triggerGameOver(o.type);
     }
   }
 
@@ -2409,6 +2425,7 @@ const DOCK_HOLD_REQUIRED = 1500; // ms estacionado para validar atracação
 
 function chronoReset() {
   chronoStart = null; chronoEnd = null; dockHoldMs = 0;
+  gameOver = false;
   chronoEl.classList.remove('running','done');
   chronoValEl.textContent = '00:00.0';
   if (typeof setPaused === 'function') setPaused(false);
@@ -2564,6 +2581,30 @@ function updateReadouts() {
 // ══════════════════════════════════════════════════
 // GAME LOOP
 // ══════════════════════════════════════════════════
+// ── Game over (colisão com doca/barcos) ──
+let gameOver = false;
+
+const OBSTACLE_LABELS = {
+  quay:   'Você colidiu com o cais. A manobra foi encerrada.',
+  finger: 'Você esbarrou no trapiche. A manobra foi encerrada.',
+  boat:   'Você abalroou um barco atracado. A manobra foi encerrada.',
+};
+
+function triggerGameOver(obstacleType) {
+  gameOver = true;
+  boat.vx = 0; boat.vy = 0; boat.vr = 0;
+  chronoEl.classList.remove('running');
+  document.getElementById('gameover-reason').textContent =
+    OBSTACLE_LABELS[obstacleType] || OBSTACLE_LABELS.quay;
+  document.getElementById('modal-gameover').classList.remove('hidden');
+}
+
+document.getElementById('btn-retry').addEventListener('click', () => {
+  document.getElementById('modal-gameover').classList.add('hidden');
+  playerNameInput.value = currentPlayer;
+  showStartModal();
+});
+
 // ── Pause ──
 let paused = false, pauseStartMs = 0;
 
@@ -2593,7 +2634,7 @@ document.addEventListener('keydown', e => {
 });
 
 function gameLoop() {
-  if (!paused) {
+  if (!paused && !gameOver) {
     pollGamepad();
     calcThrust();
     updatePhysics();
