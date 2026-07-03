@@ -330,6 +330,7 @@ header p  { font-size:9px; letter-spacing:1.5px; color:#243a52; margin-top:6px; 
 .sel-btn.active.diff-hard  { border-color:#e84040; color:#e84040; }
 .sel-btn.active.diff-custom{ border-color:#4a8ab0; color:#7ab0d0; }
 .sel-btn.active.ctrl-btn   { border-color:#4a8ab0; color:#7ab0d0; }
+.sel-btn.active.scn-btn    { border-color:#4a8ab0; color:#7ab0d0; }
 .sel-btn.active.gender-btn { border-color:#4a8ab0; color:#7ab0d0; }
 /* ── RANKING LATERAL ── */
 .ranking-panel {
@@ -506,6 +507,9 @@ header p  { font-size:9px; letter-spacing:1.5px; color:#243a52; margin-top:6px; 
         <!-- Water (infinito: tile grande centrado no barco) -->
         <rect x="-2000" y="-2000" width="5160" height="4920" fill="url(#gWater)"/>
         <rect x="-2000" y="-2000" width="5160" height="4920" fill="url(#pWaves)" opacity="0.65"/>
+
+        <!-- ═══════════ CENÁRIO 1: MARINA CLÁSSICA ═══════════ -->
+        <g id="scn-classica">
         <!-- Shallow water tint ao longo das duas marinas (compactas ao norte) -->
         <rect x="0"   y="30" width="240" height="500" fill="#061520" opacity="0.35" rx="4"/>
         <rect x="660" y="30" width="240" height="500" fill="#061520" opacity="0.35" rx="4"/>
@@ -762,6 +766,212 @@ header p  { font-size:9px; letter-spacing:1.5px; color:#243a52; margin-top:6px; 
           <circle cx="540" cy="590" r="7" fill="#2a8a40" stroke="#0a3a18" stroke-width="1"/>
           <circle cx="540" cy="588" r="2" fill="#80ffa0"/>
         </g>
+        </g><!-- /scn-classica -->
+
+        <!-- ═══════════ CENÁRIO 2: MARINA PIRATAS (Angra dos Reis) ═══════════ -->
+        <!-- Entrada por águas abertas a SW; subir pelo lado oeste, entrar no canal
+             entre os dois piers do norte e aproar na vaga (norte/sul). -->
+        <g id="scn-piratas" style="display:none">
+          <!-- Shallow tint junto à costa leste e aos piers -->
+          <rect x="280" y="100" width="540" height="300" fill="#061520" opacity="0.30" rx="4"/>
+          <rect x="800" y="80"  width="100" height="540" fill="#061520" opacity="0.35" rx="4"/>
+
+          <!-- Costa / cais leste (x=820-894, y=100-600) -->
+          <rect x="825" y="105" width="74" height="500" fill="#000" opacity="0.40" rx="3"/>
+          <rect x="820" y="100" width="74" height="500" fill="url(#pPlanksV)" rx="3"/>
+          <rect x="820" y="100" width="4"  height="500" fill="#4a3418"/>
+          <text x="858" y="350" text-anchor="middle" font-size="10" font-family="monospace"
+                fill="#4a3010" letter-spacing="4" opacity="0.5"
+                transform="rotate(90 858 350)">MARINA PIRATAS</text>
+
+          <!-- Pier norte (y=120-146, x=300-800) -->
+          <rect x="305" y="125" width="500" height="28" fill="#000" opacity="0.35" rx="2"/>
+          <rect x="300" y="120" width="500" height="26" fill="url(#pPlanksH)" rx="2"/>
+          <rect x="300" y="120" width="500" height="4"  fill="#5a4020"/>
+          <rect x="300" y="142" width="500" height="4"  fill="#3e2c10"/>
+
+          <!-- Pier sul (y=356-382, x=380-800) -->
+          <rect x="385" y="361" width="420" height="28" fill="#000" opacity="0.35" rx="2"/>
+          <rect x="380" y="356" width="420" height="26" fill="url(#pPlanksH)" rx="2"/>
+          <rect x="380" y="356" width="420" height="4"  fill="#5a4020"/>
+          <rect x="380" y="378" width="420" height="4"  fill="#3e2c10"/>
+
+          <!-- Pier do heliponto (y=430-456, x=316-620) + plataforma (240-316, 395-471) -->
+          <rect x="321" y="435" width="304" height="28" fill="#000" opacity="0.35" rx="2"/>
+          <rect x="316" y="430" width="304" height="26" fill="url(#pPlanksH)" rx="2"/>
+          <rect x="316" y="430" width="304" height="4"  fill="#5a4020"/>
+          <rect x="316" y="452" width="304" height="4"  fill="#3e2c10"/>
+          <rect x="245" y="400" width="76" height="76" fill="#000" opacity="0.40" rx="4"/>
+          <rect x="240" y="395" width="76" height="76" fill="#3a4048" rx="4"/>
+          <circle cx="278" cy="433" r="28" fill="none" stroke="#c8d0d8" stroke-width="2.5"/>
+          <text x="278" y="442" text-anchor="middle" font-size="26" font-family="monospace"
+                fill="#c8d0d8" font-weight="bold">H</text>
+
+          <!-- Barcos aportados pendurados abaixo do pier norte (proa ao sul) -->
+          <g fill="#e8ecef" stroke="#9ca8b0" stroke-width="0.8">
+            <path d="M 322 150 L 352 150 L 352 200 Q 352 224 337 230 Q 322 224 322 200 Z"/>
+            <path d="M 392 150 L 422 150 L 422 200 Q 422 224 407 230 Q 392 224 392 200 Z" fill="#b8231a" stroke="#5a1008"/>
+            <path d="M 518 150 L 548 150 L 548 200 Q 548 224 533 230 Q 518 224 518 200 Z" fill="#18344e" stroke="#0a1a2c"/>
+            <path d="M 602 150 L 632 150 L 632 200 Q 632 224 617 230 Q 602 224 602 200 Z"/>
+            <path d="M 692 150 L 722 150 L 722 200 Q 722 224 707 230 Q 692 224 692 200 Z" fill="#f0e6c8" stroke="#9a8a60"/>
+          </g>
+          <g fill="#6b4a22" opacity="0.8">
+            <rect x="328" y="158" width="18" height="34" rx="2"/>
+            <rect x="398" y="158" width="18" height="34" rx="2"/>
+            <rect x="524" y="158" width="18" height="34" rx="2"/>
+            <rect x="608" y="158" width="18" height="34" rx="2"/>
+            <rect x="698" y="158" width="18" height="34" rx="2"/>
+          </g>
+
+          <!-- Barcos aportados abaixo do pier sul (proa ao sul) -->
+          <g fill="#e8ecef" stroke="#9ca8b0" stroke-width="0.8">
+            <path d="M 422 386 L 452 386 L 452 436 Q 452 460 437 466 Q 422 460 422 436 Z" fill="#2a5a3a" stroke="#0f3020"/>
+            <path d="M 562 386 L 592 386 L 592 436 Q 592 460 577 466 Q 562 460 562 436 Z"/>
+            <path d="M 702 386 L 732 386 L 732 436 Q 732 460 717 466 Q 702 460 702 436 Z" fill="#b8231a" stroke="#5a1008"/>
+          </g>
+          <g fill="#6b4a22" opacity="0.8">
+            <rect x="428" y="394" width="18" height="34" rx="2"/>
+            <rect x="568" y="394" width="18" height="34" rx="2"/>
+            <rect x="708" y="394" width="18" height="34" rx="2"/>
+          </g>
+
+          <!-- Bollards -->
+          <g fill="#3a2810" stroke="#1c1408" stroke-width="1">
+            <circle cx="337" cy="148" r="4.5"/><circle cx="407" cy="148" r="4.5"/>
+            <circle cx="470" cy="148" r="4.5"/><circle cx="533" cy="148" r="4.5"/>
+            <circle cx="617" cy="148" r="4.5"/><circle cx="707" cy="148" r="4.5"/>
+            <circle cx="437" cy="384" r="4.5"/><circle cx="577" cy="384" r="4.5"/>
+            <circle cx="717" cy="384" r="4.5"/>
+          </g>
+
+          <!-- ALVO — vaga N/S entre dois barcos do pier norte -->
+          <g id="target-piratas" opacity="0.8">
+            <rect x="436" y="150" width="68" height="164"
+                  fill="none" stroke="#2ae07e" stroke-width="2"
+                  stroke-dasharray="8 6" rx="3"/>
+            <text x="470" y="238" text-anchor="middle" font-size="12" font-family="monospace"
+                  fill="#2ae07e" letter-spacing="3" opacity="0.9">VAGA</text>
+            <text x="470" y="252" text-anchor="middle" font-size="7" font-family="monospace"
+                  fill="#2ae07e" letter-spacing="2" opacity="0.7">DOCK HERE</text>
+            <path d="M 470 300 L 470 288 M 465 295 L 470 288 L 475 295"
+                  fill="none" stroke="#2ae07e" stroke-width="1.5" opacity="0.7"/>
+          </g>
+
+          <!-- Boias marcando a subida oeste -->
+          <g>
+            <circle cx="190" cy="500" r="7" fill="#b22020" stroke="#5a0a0a" stroke-width="1"/>
+            <circle cx="190" cy="498" r="2" fill="#ff8080"/>
+            <circle cx="190" cy="300" r="7" fill="#2a8a40" stroke="#0a3a18" stroke-width="1"/>
+            <circle cx="190" cy="298" r="2" fill="#80ffa0"/>
+          </g>
+        </g><!-- /scn-piratas -->
+
+        <!-- ═══════════ CENÁRIO 3: IATE CLUBE SC (Squadra Marine) ═══════════ -->
+        <!-- Missão inversa: sair do berço no pier central, contornar pela
+             esquerda/norte e encostar no posto de combustível a leste. -->
+        <g id="scn-iate-sc" style="display:none">
+          <!-- Shallow tint junto às estruturas -->
+          <rect x="80"  y="100" width="620" height="120" fill="#061520" opacity="0.30" rx="4"/>
+          <rect x="680" y="290" width="220" height="410" fill="#061520" opacity="0.30" rx="4"/>
+
+          <!-- Quebra-mar norte (x=60-700, y=60-100) — pedra -->
+          <rect x="65" y="65" width="640" height="40" fill="#000" opacity="0.40" rx="6"/>
+          <rect x="60" y="60" width="640" height="40" fill="#3a4048" rx="6"/>
+          <rect x="60" y="60" width="640" height="6"  fill="#4a525c" rx="3"/>
+          <!-- Quebra-mar oeste (x=40-80, y=60-560) -->
+          <rect x="45" y="65" width="40" height="500" fill="#000" opacity="0.40" rx="6"/>
+          <rect x="40" y="60" width="40" height="500" fill="#3a4048" rx="6"/>
+
+          <!-- Costa / pátio leste-sul (x=700-894, y=300-700) -->
+          <rect x="705" y="305" width="194" height="400" fill="#000" opacity="0.40" rx="3"/>
+          <rect x="700" y="300" width="194" height="400" fill="#2b2416" rx="3"/>
+          <rect x="700" y="300" width="194" height="400" fill="url(#pPlanksV)" opacity="0.25" rx="3"/>
+          <rect x="700" y="300" width="6"   height="400" fill="#4a3418"/>
+          <text x="800" y="520" text-anchor="middle" font-size="10" font-family="monospace"
+                fill="#4a3010" letter-spacing="3" opacity="0.55"
+                transform="rotate(90 800 520)">IATE CLUBE SC</text>
+          <!-- Barcos no pátio seco -->
+          <g fill="#e8ecef" stroke="#9ca8b0" stroke-width="0.8" opacity="0.7">
+            <path d="M 740 420 L 770 420 L 770 470 Q 770 494 755 500 Q 740 494 740 470 Z"/>
+            <path d="M 800 430 L 830 430 L 830 480 Q 830 504 815 510 Q 800 504 800 480 Z" fill="#18344e" stroke="#0a1a2c"/>
+            <path d="M 748 560 L 778 560 L 778 610 Q 778 634 763 640 Q 748 634 748 610 Z" fill="#b8231a" stroke="#5a1008"/>
+          </g>
+
+          <!-- Pier central (x=200-620, y=340-366) + esporão norte (x=200-226, y=250-340) -->
+          <rect x="205" y="345" width="420" height="28" fill="#000" opacity="0.35" rx="2"/>
+          <rect x="200" y="340" width="420" height="26" fill="url(#pPlanksH)" rx="2"/>
+          <rect x="200" y="340" width="420" height="4"  fill="#5a4020"/>
+          <rect x="200" y="362" width="420" height="4"  fill="#3e2c10"/>
+          <rect x="205" y="255" width="26" height="90" fill="#000" opacity="0.35" rx="2"/>
+          <rect x="200" y="250" width="26" height="90" fill="url(#pPlanksV)" rx="2"/>
+          <rect x="222" y="250" width="4"  height="90" fill="#4a3418"/>
+
+          <!-- Barcos lado norte do pier central (proa ao norte) -->
+          <g fill="#e8ecef" stroke="#9ca8b0" stroke-width="0.8">
+            <path d="M 250 336 L 284 336 L 284 286 Q 284 262 267 254 Q 250 262 250 286 Z" fill="#18344e" stroke="#0a1a2c"/>
+            <path d="M 330 336 L 364 336 L 364 286 Q 364 262 347 254 Q 330 262 330 286 Z"/>
+            <path d="M 410 336 L 444 336 L 444 286 Q 444 262 427 254 Q 410 262 410 286 Z" fill="#f0e6c8" stroke="#9a8a60"/>
+          </g>
+          <g fill="#6b4a22" opacity="0.8">
+            <rect x="256" y="290" width="20" height="36" rx="2"/>
+            <rect x="336" y="290" width="20" height="36" rx="2"/>
+            <rect x="416" y="290" width="20" height="36" rx="2"/>
+          </g>
+
+          <!-- Barcos lado sul do pier central (vaga do jogador fica em x≈330) -->
+          <g fill="#e8ecef" stroke="#9ca8b0" stroke-width="0.8">
+            <path d="M 245 370 L 279 370 L 279 420 Q 279 444 262 452 Q 245 444 245 420 Z" fill="#b8231a" stroke="#5a1008"/>
+            <path d="M 390 370 L 424 370 L 424 420 Q 424 444 407 452 Q 390 444 390 420 Z"/>
+            <path d="M 445 370 L 479 370 L 479 420 Q 479 444 462 452 Q 445 444 445 420 Z" fill="#2a5a3a" stroke="#0f3020"/>
+            <path d="M 520 370 L 554 370 L 554 420 Q 554 444 537 452 Q 520 444 520 420 Z" fill="#18344e" stroke="#0a1a2c"/>
+          </g>
+          <g fill="#6b4a22" opacity="0.8">
+            <rect x="251" y="378" width="20" height="36" rx="2"/>
+            <rect x="396" y="378" width="20" height="36" rx="2"/>
+            <rect x="451" y="378" width="20" height="36" rx="2"/>
+            <rect x="526" y="378" width="20" height="36" rx="2"/>
+          </g>
+
+          <!-- Bollards do pier central -->
+          <g fill="#3a2810" stroke="#1c1408" stroke-width="1">
+            <circle cx="267" cy="342" r="4.5"/><circle cx="347" cy="342" r="4.5"/>
+            <circle cx="427" cy="342" r="4.5"/><circle cx="262" cy="368" r="4.5"/>
+            <circle cx="330" cy="368" r="4.5"/><circle cx="407" cy="368" r="4.5"/>
+            <circle cx="462" cy="368" r="4.5"/><circle cx="537" cy="368" r="4.5"/>
+          </g>
+
+          <!-- Posto de combustível: pier saindo da costa leste (x=570-700, y=288-312) -->
+          <rect x="575" y="293" width="130" height="26" fill="#000" opacity="0.35" rx="2"/>
+          <rect x="570" y="288" width="132" height="24" fill="url(#pPlanksH)" rx="2"/>
+          <rect x="570" y="288" width="132" height="4"  fill="#5a4020"/>
+          <rect x="570" y="308" width="132" height="4"  fill="#3e2c10"/>
+          <!-- Bomba de combustível (âmbar) -->
+          <rect x="652" y="292" width="12" height="16" fill="#e8a030" stroke="#7a5010" stroke-width="1" rx="2"/>
+          <circle cx="658" cy="297" r="3" fill="#7a5010"/>
+          <text x="620" y="304" text-anchor="middle" font-size="8" font-family="monospace"
+                fill="#3e2c10" letter-spacing="1" font-weight="bold">FUEL</text>
+
+          <!-- ALVO — encostar de lado no posto (proa L/O) -->
+          <g id="target-iate-sc" opacity="0.8">
+            <rect x="585" y="212" width="110" height="72"
+                  fill="none" stroke="#2ae07e" stroke-width="2"
+                  stroke-dasharray="8 6" rx="3"/>
+            <text x="640" y="244" text-anchor="middle" font-size="12" font-family="monospace"
+                  fill="#2ae07e" letter-spacing="3" opacity="0.9">POSTO</text>
+            <text x="640" y="258" text-anchor="middle" font-size="7" font-family="monospace"
+                  fill="#2ae07e" letter-spacing="2" opacity="0.7">REFUEL HERE</text>
+            <path d="M 640 296 L 640 286 M 635 292 L 640 286 L 645 292"
+                  fill="none" stroke="#2ae07e" stroke-width="1.5" opacity="0.7"/>
+          </g>
+
+          <!-- Boias marcando o canal norte -->
+          <g>
+            <circle cx="140" cy="200" r="7" fill="#2a8a40" stroke="#0a3a18" stroke-width="1"/>
+            <circle cx="140" cy="198" r="2" fill="#80ffa0"/>
+            <circle cx="400" cy="160" r="7" fill="#b22020" stroke="#5a0a0a" stroke-width="1"/>
+            <circle cx="400" cy="158" r="2" fill="#ff8080"/>
+          </g>
+        </g><!-- /scn-iate-sc -->
 
         </g><!-- /world-g -->
 
@@ -1650,6 +1860,8 @@ header p  { font-size:9px; letter-spacing:1.5px; color:#243a52; margin-top:6px; 
       <button class="sel-btn gender-btn active" data-gender="m">Masculino</button>
       <button class="sel-btn gender-btn" data-gender="f">Feminino</button>
     </div>
+    <div class="modal-section-lbl">Circuito</div>
+    <div class="sel-grid" id="scenario-selector"></div>
     <div class="modal-row">
       <span class="modal-section-lbl">Dificuldade</span>
       <button class="link-btn" id="btn-edit-profiles">✎ Editar perfis</button>
@@ -2161,7 +2373,8 @@ const FINGER_INSET_TIP  = 10;
 const FINGER_INSET_SIDE = 11;  // 28 tall → 6 tall de colisão efetiva
 const HULL_PAD = 3;            // folga extra no casco (px subtraídos de extX/extY)
 const GAMEOVER_IMPACT = 0.5;   // px/frame — impacto acima disso = game over (abaixo = raspão nas defensas)
-const OBSTACLES = [
+// Obstáculos do cenário "Marina Clássica" (mapa original)
+const OBSTACLES_CLASSICA = [
   // ── Marina oeste (quay x=6-70 y=40-540; 4 fingers visuais x=70-230) ──
   { x: 6,   y: 40,  w: 64,  h: 500, type: 'quay'   },
   { x: 70,  y: 60 + FINGER_INSET_SIDE, w: 160 - FINGER_INSET_TIP, h: 28 - 2*FINGER_INSET_SIDE, type: 'finger' },
@@ -2182,6 +2395,84 @@ const OBSTACLES = [
   { x: 668, y: 122, w: 160, h: 34,  type: 'boat'   },
   { x: 660, y: 377, w: 174, h: 40,  type: 'boat'   },
 ];
+
+// ══════════════════════════════════════════════════
+// CENÁRIOS (mapas) — cada um define spawn (dock), zona-alvo (target) e
+// obstáculos. target.align: 'ew' = proa leste/oeste aceita; 'ns' = norte/sul.
+// Os grupos SVG correspondentes têm id "scn-<id>" dentro de #world-g.
+// ══════════════════════════════════════════════════
+const SCENARIOS = {
+  'classica': {
+    name: 'Marina Clássica', goal: 'Atracar na vaga',
+    dock:   { x: 450, y: 630, heading: 0 },
+    target: { cx: 752.5, cy: 266, halfW: 70, halfH: 42, align: 'ew' },
+    obstacles: OBSTACLES_CLASSICA,
+  },
+  'piratas': {
+    // Marina Piratas (Angra dos Reis): subir pelo lado oeste em águas abertas,
+    // entrar no canal entre os dois piers do norte e aproar na vaga N/S entre
+    // dois barcos aportados. Canal E/O tem ~110 px livres (barco 52×180).
+    name: 'Marina Piratas', goal: 'Atracar na vaga',
+    dock:   { x: 110, y: 610, heading: 0 },
+    target: { cx: 470, cy: 235, halfW: 30, halfH: 50, align: 'ns' },
+    obstacles: [
+      // Costa / cais leste
+      { x: 820, y: 100, w: 74, h: 500, type: 'quay' },
+      // Pier norte (visual y=120-146) — tip oeste recolhido, lados inset
+      { x: 300 + FINGER_INSET_TIP, y: 120 + FINGER_INSET_SIDE, w: 500 - FINGER_INSET_TIP, h: 26 - 2*FINGER_INSET_SIDE, type: 'finger' },
+      // Pier sul (visual y=356-382)
+      { x: 380 + FINGER_INSET_TIP, y: 356 + FINGER_INSET_SIDE, w: 420 - FINGER_INSET_TIP, h: 26 - 2*FINGER_INSET_SIDE, type: 'finger' },
+      // Pier do heliponto (visual y=430-456) — tip leste recolhido
+      { x: 316, y: 430 + FINGER_INSET_SIDE, w: 304 - FINGER_INSET_TIP, h: 26 - 2*FINGER_INSET_SIDE, type: 'finger' },
+      // Plataforma do heliponto
+      { x: 240, y: 395, w: 76, h: 76, type: 'quay' },
+      // Barcos pendurados abaixo do pier norte (a vaga fica entre 424 e 516)
+      { x: 322, y: 150, w: 30, h: 80, type: 'boat' },
+      { x: 392, y: 150, w: 30, h: 80, type: 'boat' },
+      { x: 518, y: 150, w: 30, h: 80, type: 'boat' },
+      { x: 602, y: 150, w: 30, h: 80, type: 'boat' },
+      { x: 692, y: 150, w: 30, h: 80, type: 'boat' },
+      // Barcos abaixo do pier sul
+      { x: 422, y: 386, w: 30, h: 80, type: 'boat' },
+      { x: 562, y: 386, w: 30, h: 80, type: 'boat' },
+      { x: 702, y: 386, w: 30, h: 80, type: 'boat' },
+    ],
+  },
+  'iate-sc': {
+    // Iate Clube SC (Squadra Marine): missão inversa — o barco COMEÇA atracado
+    // (proa ao sul) no pier central; sair de ré/girar, contornar o pier pela
+    // esquerda (corredor oeste 80→200 = 120 px), seguir pelo canal norte e
+    // encostar de lado no posto de combustível a leste.
+    name: 'Iate Clube SC', goal: 'Abastecer no posto',
+    dock:   { x: 330, y: 450, heading: Math.PI },
+    target: { cx: 640, cy: 250, halfW: 55, halfH: 38, align: 'ew' },
+    obstacles: [
+      // Quebra-mar norte e oeste (pedra)
+      { x: 60,  y: 60,  w: 640, h: 40,  type: 'quay' },
+      { x: 40,  y: 60,  w: 40,  h: 500, type: 'quay' },
+      // Costa / pátio leste-sul
+      { x: 700, y: 300, w: 194, h: 400, type: 'quay' },
+      // Pier central (visual y=340-366) — tip oeste recolhido
+      { x: 200 + FINGER_INSET_TIP, y: 340 + FINGER_INSET_SIDE, w: 420 - FINGER_INSET_TIP, h: 26 - 2*FINGER_INSET_SIDE, type: 'finger' },
+      // Esporão norte do pier (visual x=200-226, y=250-340) — tip norte recolhido
+      { x: 200, y: 250 + FINGER_INSET_TIP, w: 26, h: 90 - FINGER_INSET_TIP, type: 'finger' },
+      // Pier do posto (visual y=288-312) — colisão mais fina (folga de defensas)
+      { x: 570, y: 296, w: 130, h: 12, type: 'finger' },
+      // Barcos lado norte do pier central
+      { x: 250, y: 254, w: 34, h: 82, type: 'boat' },
+      { x: 330, y: 254, w: 34, h: 82, type: 'boat' },
+      { x: 410, y: 254, w: 34, h: 82, type: 'boat' },
+      // Barcos lado sul (vaga do jogador em x≈330)
+      { x: 245, y: 370, w: 34, h: 82, type: 'boat' },
+      { x: 390, y: 370, w: 34, h: 82, type: 'boat' },
+      { x: 445, y: 370, w: 34, h: 82, type: 'boat' },
+      { x: 520, y: 370, w: 34, h: 82, type: 'boat' },
+    ],
+  },
+};
+let currentScenarioId = 'classica';
+// Referência mutável — applyScenario() reaponta para o array do cenário ativo
+let OBSTACLES = SCENARIOS[currentScenarioId].obstacles;
 
 // Wake buffer
 const wakePoints = [];
@@ -2443,7 +2734,32 @@ const infoPos = document.getElementById('info-pos');
 // Proa ideal apontada para oeste (entrando na vaga) = heading = -π/2 (270°) ou +π/2?
 // A vaga é à direita, fingers em cima/baixo; o barco entra pela esquerda (x menor → maior)
 // e fica paralelo ao cais leste (proa apontada para leste OU oeste aceita).
-const TARGET = { cx: 752.5, cy: 266, halfW: 70, halfH: 42 };
+// Campos mutados por applyScenario() conforme o cenário ativo.
+// align: 'ew' = proa leste/oeste aceita; 'ns' = proa norte/sul aceita.
+const TARGET = { cx: 752.5, cy: 266, halfW: 70, halfH: 42, align: 'ew' };
+
+// ── Troca de cenário: alterna arte SVG, obstáculos, dock e alvo ──
+function applyScenario(id) {
+  const sc = SCENARIOS[id];
+  if (!sc) return;
+  currentScenarioId = id;
+  // Alterna visibilidade dos grupos SVG (scn-<id> dentro de #world-g)
+  for (const key of Object.keys(SCENARIOS)) {
+    const g = document.getElementById('scn-' + key);
+    if (g) g.style.display = (key === id) ? '' : 'none';
+  }
+  OBSTACLES = sc.obstacles;
+  DOCK.x = sc.dock.x; DOCK.y = sc.dock.y; DOCK.heading = sc.dock.heading;
+  TARGET.cx = sc.target.cx;       TARGET.cy = sc.target.cy;
+  TARGET.halfW = sc.target.halfW; TARGET.halfH = sc.target.halfH;
+  TARGET.align = sc.target.align;
+  // Reposiciona o barco no spawn do cenário e limpa o rastro
+  boat.x = DOCK.x; boat.y = DOCK.y; boat.heading = DOCK.heading;
+  boat.vx = 0; boat.vy = 0; boat.vr = 0;
+  wakePoints.length = 0;
+  chronoReset();
+  refreshSideRanking(); // categoria do ranking inclui o circuito
+}
 const chronoEl    = document.getElementById('chrono');
 const chronoValEl = document.getElementById('chrono-val');
 let chronoStart = null;   // ms — null = ainda não iniciou
@@ -2489,15 +2805,24 @@ function updateChrono() {
   chronoValEl.textContent = fmtChrono(now - chronoStart);
 
   // Verifica atracação: centro do barco dentro da vaga, velocidade baixa,
-  // proa alinhada com o eixo leste/oeste (±25°)
+  // proa alinhada com o eixo do cenário (±25°): 'ew' = leste/oeste,
+  // 'ns' = norte/sul (0° ou 180°)
   const dx = Math.abs(boat.x - TARGET.cx);
   const dy = Math.abs(boat.y - TARGET.cy);
   const spd = Math.hypot(boat.vx, boat.vy);
-  // heading: 0=norte, π/2=leste, -π/2=oeste. Aceita leste ou oeste.
+  // heading normalizado: 0=norte, π/2=leste, π=sul, 3π/2=oeste
   const h = ((boat.heading % (2*Math.PI)) + 2*Math.PI) % (2*Math.PI);
-  const dEast = Math.min(Math.abs(h - Math.PI/2), Math.abs(h - Math.PI/2 - 2*Math.PI));
-  const dWest = Math.min(Math.abs(h - 3*Math.PI/2), Math.abs(h - 3*Math.PI/2 - 2*Math.PI));
-  const aligned = Math.min(dEast, dWest) < (25 * Math.PI / 180);
+  const TOL = 25 * Math.PI / 180;
+  let aligned;
+  if (TARGET.align === 'ns') {
+    const dNorth = Math.min(h, 2*Math.PI - h);
+    const dSouth = Math.abs(h - Math.PI);
+    aligned = Math.min(dNorth, dSouth) < TOL;
+  } else {
+    const dEast = Math.min(Math.abs(h - Math.PI/2), Math.abs(h - Math.PI/2 - 2*Math.PI));
+    const dWest = Math.min(Math.abs(h - 3*Math.PI/2), Math.abs(h - 3*Math.PI/2 - 2*Math.PI));
+    aligned = Math.min(dEast, dWest) < TOL;
+  }
 
   const inBerth = dx < TARGET.halfW && dy < TARGET.halfH && spd < 0.35 && aligned;
   if (inBerth) {
@@ -2763,9 +3088,10 @@ function applyVesselProfile(id) {
   // 4) Cache de elementos do SVG ativo
   cacheActiveEls(id);
 
-  // 5) Spawn em águas abertas ao sul das marinas, proa apontando para o norte
-  //    — o desafio é navegar até a vaga na marina leste e entrar no berço.
-  DOCK.x = 450; DOCK.y = 630; DOCK.heading = 0;
+  // 5) Spawn no dock do CENÁRIO ativo (não mais hardcoded) — cada mapa tem
+  //    posição/proa de partida próprias definidas em SCENARIOS.
+  const scDock = SCENARIOS[currentScenarioId].dock;
+  DOCK.x = scDock.x; DOCK.y = scDock.y; DOCK.heading = scDock.heading;
   boat.x = DOCK.x; boat.y = DOCK.y; boat.heading = DOCK.heading;
   boat.vx = 0; boat.vy = 0; boat.vr = 0;
   wakePoints.length = 0;
@@ -3184,6 +3510,25 @@ function renderDiffSelector() {
   });
 }
 
+// ── Seletor de circuito (cenário/mapa) no modal inicial ──
+function renderScenarioSelector() {
+  const container = document.getElementById('scenario-selector');
+  if (!container) return;
+  container.innerHTML = '';
+  for (const [id, sc] of Object.entries(SCENARIOS)) {
+    const btn = document.createElement('button');
+    btn.className = 'sel-btn scn-btn' + (id === currentScenarioId ? ' active' : '');
+    btn.innerHTML = `<strong style="font-size:10px">${sc.name}</strong><br>`
+                  + `<span style="opacity:.55;font-size:8px">${sc.goal}</span>`;
+    btn.onclick = () => {
+      applyScenario(id);
+      renderScenarioSelector();
+      refreshSideRanking();
+    };
+    container.appendChild(btn);
+  }
+}
+
 function selectCtrl(type) {
   selectedCtrlType = type;
   document.querySelectorAll('.ctrl-btn').forEach(b => {
@@ -3330,19 +3675,22 @@ document.querySelectorAll('.gender-btn').forEach(b => {
 let currentPlayer = '';
 const RANKING_KEY = 'matel-ranking-v2';
 
-// Categoria ativa = dificuldade + controle + gênero
+// Categoria ativa = circuito + dificuldade + controle + gênero
 function currentCategory() {
   return {
+    scenario:   SCENARIOS[currentScenarioId].name,
     difficulty: getDiffProfile(selectedDiffId).name,
     control:    selectedCtrlType,
     gender:     selectedGender,
   };
 }
 function categoryLabel(cat) {
-  return `${cat.difficulty} · ${CTRL_LABELS[cat.control] || cat.control} · ${GENDER_LABELS[cat.gender] || '—'}`;
+  return `${cat.scenario || '—'} · ${cat.difficulty} · ${CTRL_LABELS[cat.control] || cat.control} · ${GENDER_LABELS[cat.gender] || '—'}`;
 }
 function filterByCategory(entries, cat) {
-  return entries.filter(e => e.difficulty === cat.difficulty
+  // Entradas antigas sem "scenario" simplesmente não casam com nenhum circuito
+  return entries.filter(e => e.scenario   === cat.scenario
+                          && e.difficulty === cat.difficulty
                           && e.control    === cat.control
                           && e.gender     === cat.gender);
 }
@@ -3413,6 +3761,7 @@ const finishRankingEl = document.getElementById('finish-ranking');
 function showStartModal() {
   loadDiffProfiles();
   renderDiffSelector();
+  renderScenarioSelector();
   selectCtrl(selectedCtrlType);
   startModal.classList.remove('hidden');
   setTimeout(() => playerNameInput.focus(), 80);
@@ -3455,6 +3804,13 @@ function hideStartModal() {
 
 function showFinishModal(ms) {
   if (!currentPlayer) return;
+  // Título conforme a missão do circuito ativo
+  const titleEl = finishModal.querySelector('.modal-title');
+  if (titleEl) {
+    titleEl.textContent = currentScenarioId === 'iate-sc'
+      ? '⛽ Abastecimento Concluído!'
+      : '🏆 Atracação Concluída!';
+  }
   const entries = addRankingEntry(currentPlayer, ms);
   finishTimeEl.textContent = fmtChrono(ms);
   renderRanking(finishRankingEl, entries, ms);
