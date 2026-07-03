@@ -738,14 +738,15 @@ header p  { font-size:9px; letter-spacing:1.5px; color:#243a52; margin-top:6px; 
 
         <!-- ═══ ALVO — marina leste, berço 2 (vaga vazia, estreita) ═══ -->
         <g id="target-berth" opacity="0.8">
-          <rect x="675" y="218" width="155" height="96"
+          <!-- JS: cx=726 cy=266 halfW=112 halfH=48 → x=614-838 -->
+          <rect x="614" y="218" width="224" height="96"
                 fill="none" stroke="#2ae07e" stroke-width="2"
                 stroke-dasharray="8 6" rx="3"/>
-          <text x="752" y="268" text-anchor="middle" font-size="12" font-family="monospace"
+          <text x="726" y="262" text-anchor="middle" font-size="12" font-family="monospace"
                 fill="#2ae07e" letter-spacing="3" opacity="0.9">VAGA</text>
-          <text x="752" y="282" text-anchor="middle" font-size="7" font-family="monospace"
+          <text x="726" y="276" text-anchor="middle" font-size="7" font-family="monospace"
                 fill="#2ae07e" letter-spacing="2" opacity="0.7">DOCK HERE</text>
-          <path d="M 820 266 L 835 266 M 828 261 L 835 266 L 828 271"
+          <path d="M 802 266 L 817 266 M 810 261 L 817 266 L 810 271"
                 fill="none" stroke="#2ae07e" stroke-width="1.5" opacity="0.7"/>
         </g>
 
@@ -769,100 +770,185 @@ header p  { font-size:9px; letter-spacing:1.5px; color:#243a52; margin-top:6px; 
         </g><!-- /scn-classica -->
 
         <!-- ═══════════ CENÁRIO 2: MARINA PIRATAS (Angra dos Reis) ═══════════ -->
-        <!-- Entrada por águas abertas a SW; subir pelo lado oeste, entrar no canal
-             entre os dois piers do norte e aproar na vaga (norte/sul). -->
+        <!-- Layout baseado na foto aérea: costa a leste (Shopping Piratas), três
+             fileiras de piers horizontais ao norte lotadas de barcos; da costa SE
+             sai um calçadão até a plataforma do HELIPONTO, e do heliponto sobe um
+             TRAPICHE DIAGONAL LONGO (~40°, ~280px) para NW até um quiosque redondo.
+             Rota: partir entre as boias (vermelha a oeste, verde a leste) → subir
+             ao norte pelo lado OESTE do trapiche → contornar o quiosque → canal
+             entre o trapiche e a fileira sul → aproar ao norte na VAGA. -->
         <g id="scn-piratas" style="display:none">
-          <!-- Shallow tint junto à costa leste e aos piers -->
-          <rect x="280" y="100" width="540" height="300" fill="#061520" opacity="0.30" rx="4"/>
-          <rect x="800" y="80"  width="100" height="540" fill="#061520" opacity="0.35" rx="4"/>
+          <!-- Shallow tint junto aos piers do norte e à costa leste -->
+          <rect x="320" y="50"  width="500" height="380" fill="#061520" opacity="0.30" rx="4"/>
+          <rect x="800" y="70"  width="100" height="580" fill="#061520" opacity="0.35" rx="4"/>
 
-          <!-- Costa / cais leste (x=820-894, y=100-600) -->
-          <rect x="825" y="105" width="74" height="500" fill="#000" opacity="0.40" rx="3"/>
-          <rect x="820" y="100" width="74" height="500" fill="url(#pPlanksV)" rx="3"/>
-          <rect x="820" y="100" width="4"  height="500" fill="#4a3418"/>
-          <text x="858" y="350" text-anchor="middle" font-size="10" font-family="monospace"
+          <!-- Costa / cais leste (x=810-894, y=80-640) -->
+          <rect x="815" y="85" width="84" height="560" fill="#000" opacity="0.40" rx="3"/>
+          <rect x="810" y="80" width="84" height="560" fill="url(#pPlanksV)" rx="3"/>
+          <rect x="810" y="80" width="4"  height="560" fill="#4a3418"/>
+          <text x="852" y="360" text-anchor="middle" font-size="10" font-family="monospace"
                 fill="#4a3010" letter-spacing="4" opacity="0.5"
-                transform="rotate(90 858 350)">MARINA PIRATAS</text>
+                transform="rotate(90 852 360)">MARINA PIRATAS</text>
 
-          <!-- Pier norte (y=120-146, x=300-800) -->
-          <rect x="305" y="125" width="500" height="28" fill="#000" opacity="0.35" rx="2"/>
-          <rect x="300" y="120" width="500" height="26" fill="url(#pPlanksH)" rx="2"/>
-          <rect x="300" y="120" width="500" height="4"  fill="#5a4020"/>
-          <rect x="300" y="142" width="500" height="4"  fill="#3e2c10"/>
+          <!-- Fileira 1 (norte) y=55-81, x=330-810 -->
+          <rect x="335" y="60"  width="480" height="28" fill="#000" opacity="0.35" rx="2"/>
+          <rect x="330" y="55"  width="480" height="26" fill="url(#pPlanksH)" rx="2"/>
+          <rect x="330" y="55"  width="480" height="4"  fill="#5a4020"/>
+          <rect x="330" y="77"  width="480" height="4"  fill="#3e2c10"/>
 
-          <!-- Pier sul (y=356-382, x=380-800) -->
-          <rect x="385" y="361" width="420" height="28" fill="#000" opacity="0.35" rx="2"/>
-          <rect x="380" y="356" width="420" height="26" fill="url(#pPlanksH)" rx="2"/>
-          <rect x="380" y="356" width="420" height="4"  fill="#5a4020"/>
-          <rect x="380" y="378" width="420" height="4"  fill="#3e2c10"/>
+          <!-- Fileira 2 y=165-191, x=330-810 -->
+          <rect x="335" y="170" width="480" height="28" fill="#000" opacity="0.35" rx="2"/>
+          <rect x="330" y="165" width="480" height="26" fill="url(#pPlanksH)" rx="2"/>
+          <rect x="330" y="165" width="480" height="4"  fill="#5a4020"/>
+          <rect x="330" y="187" width="480" height="4"  fill="#3e2c10"/>
 
-          <!-- Pier do heliponto (y=430-456, x=316-620) + plataforma (240-316, 395-471) -->
-          <rect x="321" y="435" width="304" height="28" fill="#000" opacity="0.35" rx="2"/>
-          <rect x="316" y="430" width="304" height="26" fill="url(#pPlanksH)" rx="2"/>
-          <rect x="316" y="430" width="304" height="4"  fill="#5a4020"/>
-          <rect x="316" y="452" width="304" height="4"  fill="#3e2c10"/>
-          <rect x="245" y="400" width="76" height="76" fill="#000" opacity="0.40" rx="4"/>
-          <rect x="240" y="395" width="76" height="76" fill="#3a4048" rx="4"/>
-          <circle cx="278" cy="433" r="28" fill="none" stroke="#c8d0d8" stroke-width="2.5"/>
-          <text x="278" y="442" text-anchor="middle" font-size="26" font-family="monospace"
-                fill="#c8d0d8" font-weight="bold">H</text>
+          <!-- Fileira 3 (sul — fileira da VAGA) y=275-301, x=330-810 -->
+          <rect x="335" y="280" width="480" height="28" fill="#000" opacity="0.35" rx="2"/>
+          <rect x="330" y="275" width="480" height="26" fill="url(#pPlanksH)" rx="2"/>
+          <rect x="330" y="275" width="480" height="4"  fill="#5a4020"/>
+          <rect x="330" y="297" width="480" height="4"  fill="#3e2c10"/>
 
-          <!-- Barcos aportados pendurados abaixo do pier norte (proa ao sul) -->
+          <!-- Calçadão da costa SE até o heliponto (x=555-810, y=634-660) -->
+          <rect x="560" y="639" width="255" height="28" fill="#000" opacity="0.35" rx="2"/>
+          <rect x="555" y="634" width="255" height="26" fill="url(#pPlanksH)" rx="2"/>
+          <rect x="555" y="634" width="255" height="4"  fill="#5a4020"/>
+          <rect x="555" y="656" width="255" height="4"  fill="#3e2c10"/>
+
+          <!-- TRAPICHE DIAGONAL LONGO do heliponto ao quiosque NW
+               (260,425)→(470,605): ~277px a ~40.6° -->
+          <g transform="rotate(40.6 260 425)">
+            <rect x="263" y="419" width="277" height="18" fill="#000" opacity="0.35" rx="2"/>
+            <rect x="260" y="416" width="277" height="18" fill="url(#pPlanksH)" rx="2"/>
+            <rect x="260" y="416" width="277" height="3"  fill="#5a4020"/>
+            <rect x="260" y="431" width="277" height="3"  fill="#3e2c10"/>
+          </g>
+
+          <!-- Barcos pequenos atracados nos DOIS lados do trapiche diagonal -->
+          <g transform="translate(290.6 482.8) rotate(40.6)">
+            <path d="M -12 -28 L 12 -28 L 12 8 Q 12 22 0 28 Q -12 22 -12 8 Z"
+                  fill="#e8ecef" stroke="#9ca8b0" stroke-width="0.8"/>
+            <rect x="-7" y="-18" width="14" height="24" fill="#6b4a22" opacity="0.8" rx="2"/>
+          </g>
+          <g transform="translate(370.1 487.8) rotate(40.6)">
+            <path d="M -12 -28 L 12 -28 L 12 8 Q 12 22 0 28 Q -12 22 -12 8 Z"
+                  fill="#18344e" stroke="#0a1a2c" stroke-width="0.8"/>
+            <rect x="-7" y="-18" width="14" height="24" fill="#6b4a22" opacity="0.8" rx="2"/>
+          </g>
+          <g transform="translate(374.6 554.8) rotate(40.6)">
+            <path d="M -12 -28 L 12 -28 L 12 8 Q 12 22 0 28 Q -12 22 -12 8 Z"
+                  fill="#b8231a" stroke="#5a1008" stroke-width="0.8"/>
+            <rect x="-7" y="-18" width="14" height="24" fill="#6b4a22" opacity="0.8" rx="2"/>
+          </g>
+          <g transform="translate(447.8 554.4) rotate(40.6)">
+            <path d="M -12 -28 L 12 -28 L 12 8 Q 12 22 0 28 Q -12 22 -12 8 Z"
+                  fill="#f0e6c8" stroke="#9a8a60" stroke-width="0.8"/>
+            <rect x="-7" y="-18" width="14" height="24" fill="#6b4a22" opacity="0.8" rx="2"/>
+          </g>
+
+          <!-- Quiosque redondo no topo NW do trapiche (centro 260,425 r=22) -->
+          <circle cx="265" cy="430" r="22" fill="#000" opacity="0.40"/>
+          <circle cx="260" cy="425" r="22" fill="#7a5a2c" stroke="#3e2c10" stroke-width="1.5"/>
+          <circle cx="260" cy="425" r="13" fill="#5a4020"/>
+          <circle cx="260" cy="425" r="3"  fill="#3e2c10"/>
+
+          <!-- Plataforma do HELIPONTO (x=470-555, y=605-690) -->
+          <rect x="475" y="610" width="85" height="85" fill="#000" opacity="0.40" rx="4"/>
+          <rect x="470" y="605" width="85" height="85" fill="#1e4d35" rx="4"/>
+          <rect x="474" y="609" width="77" height="77" fill="none" stroke="#8fd0a8"
+                stroke-width="1.5" rx="3" opacity="0.65"/>
+          <circle cx="512.5" cy="649" r="27" fill="none" stroke="#e8ecef" stroke-width="2.5"/>
+          <text x="512.5" y="658" text-anchor="middle" font-size="25" font-family="monospace"
+                fill="#e8ecef" font-weight="bold">H</text>
+          <path d="M 512.5 612 L 506.5 620 L 518.5 620 Z" fill="#e8ecef" opacity="0.8"/>
+
+          <!-- Barcos aportados abaixo da fileira 1 (proa ao sul, 30×75) -->
           <g fill="#e8ecef" stroke="#9ca8b0" stroke-width="0.8">
-            <path d="M 322 150 L 352 150 L 352 200 Q 352 224 337 230 Q 322 224 322 200 Z"/>
-            <path d="M 392 150 L 422 150 L 422 200 Q 422 224 407 230 Q 392 224 392 200 Z" fill="#b8231a" stroke="#5a1008"/>
-            <path d="M 518 150 L 548 150 L 548 200 Q 548 224 533 230 Q 518 224 518 200 Z" fill="#18344e" stroke="#0a1a2c"/>
-            <path d="M 602 150 L 632 150 L 632 200 Q 632 224 617 230 Q 602 224 602 200 Z"/>
-            <path d="M 692 150 L 722 150 L 722 200 Q 722 224 707 230 Q 692 224 692 200 Z" fill="#f0e6c8" stroke="#9a8a60"/>
+            <path d="M 360 85 L 390 85 L 390 130 Q 390 154 375 160 Q 360 154 360 130 Z"/>
+            <path d="M 430 85 L 460 85 L 460 130 Q 460 154 445 160 Q 430 154 430 130 Z" fill="#b8231a" stroke="#5a1008"/>
+            <path d="M 500 85 L 530 85 L 530 130 Q 530 154 515 160 Q 500 154 500 130 Z" fill="#18344e" stroke="#0a1a2c"/>
+            <path d="M 570 85 L 600 85 L 600 130 Q 600 154 585 160 Q 570 154 570 130 Z"/>
+            <path d="M 650 85 L 680 85 L 680 130 Q 680 154 665 160 Q 650 154 650 130 Z" fill="#f0e6c8" stroke="#9a8a60"/>
+            <path d="M 730 85 L 760 85 L 760 130 Q 760 154 745 160 Q 730 154 730 130 Z" fill="#2a5a3a" stroke="#0f3020"/>
           </g>
           <g fill="#6b4a22" opacity="0.8">
-            <rect x="328" y="158" width="18" height="34" rx="2"/>
-            <rect x="398" y="158" width="18" height="34" rx="2"/>
-            <rect x="524" y="158" width="18" height="34" rx="2"/>
-            <rect x="608" y="158" width="18" height="34" rx="2"/>
-            <rect x="698" y="158" width="18" height="34" rx="2"/>
+            <rect x="366" y="93" width="18" height="32" rx="2"/>
+            <rect x="436" y="93" width="18" height="32" rx="2"/>
+            <rect x="506" y="93" width="18" height="32" rx="2"/>
+            <rect x="576" y="93" width="18" height="32" rx="2"/>
+            <rect x="656" y="93" width="18" height="32" rx="2"/>
+            <rect x="736" y="93" width="18" height="32" rx="2"/>
           </g>
 
-          <!-- Barcos aportados abaixo do pier sul (proa ao sul) -->
+          <!-- Barcos aportados abaixo da fileira 2 (proa ao sul, 30×75) -->
           <g fill="#e8ecef" stroke="#9ca8b0" stroke-width="0.8">
-            <path d="M 422 386 L 452 386 L 452 436 Q 452 460 437 466 Q 422 460 422 436 Z" fill="#2a5a3a" stroke="#0f3020"/>
-            <path d="M 562 386 L 592 386 L 592 436 Q 592 460 577 466 Q 562 460 562 436 Z"/>
-            <path d="M 702 386 L 732 386 L 732 436 Q 732 460 717 466 Q 702 460 702 436 Z" fill="#b8231a" stroke="#5a1008"/>
+            <path d="M 380 195 L 410 195 L 410 240 Q 410 264 395 270 Q 380 264 380 240 Z"/>
+            <path d="M 455 195 L 485 195 L 485 240 Q 485 264 470 270 Q 455 264 455 240 Z" fill="#18344e" stroke="#0a1a2c"/>
+            <path d="M 545 195 L 575 195 L 575 240 Q 575 264 560 270 Q 545 264 545 240 Z" fill="#b8231a" stroke="#5a1008"/>
+            <path d="M 625 195 L 655 195 L 655 240 Q 655 264 640 270 Q 625 264 625 240 Z"/>
+            <path d="M 705 195 L 735 195 L 735 240 Q 735 264 720 270 Q 705 264 705 240 Z" fill="#f0e6c8" stroke="#9a8a60"/>
           </g>
           <g fill="#6b4a22" opacity="0.8">
-            <rect x="428" y="394" width="18" height="34" rx="2"/>
-            <rect x="568" y="394" width="18" height="34" rx="2"/>
-            <rect x="708" y="394" width="18" height="34" rx="2"/>
+            <rect x="386" y="203" width="18" height="32" rx="2"/>
+            <rect x="461" y="203" width="18" height="32" rx="2"/>
+            <rect x="551" y="203" width="18" height="32" rx="2"/>
+            <rect x="631" y="203" width="18" height="32" rx="2"/>
+            <rect x="711" y="203" width="18" height="32" rx="2"/>
+          </g>
+
+          <!-- Barcos abaixo da fileira 3 (curtos, 30×55) — SÓ do flanco da vaga
+               p/ leste: o trecho oeste fica livre p/ o corredor do quiosque -->
+          <g fill="#e8ecef" stroke="#9ca8b0" stroke-width="0.8">
+            <path d="M 470 305 L 500 305 L 500 334 Q 500 349 485 360 Q 470 349 470 334 Z"/>
+            <path d="M 740 305 L 770 305 L 770 334 Q 770 349 755 360 Q 740 349 740 334 Z" fill="#b8231a" stroke="#5a1008"/>
+            <path d="M 778 305 L 808 305 L 808 334 Q 808 349 793 360 Q 778 349 778 334 Z" fill="#2a5a3a" stroke="#0f3020"/>
+          </g>
+          <g fill="#6b4a22" opacity="0.8">
+            <rect x="476" y="312" width="18" height="24" rx="2"/>
+            <rect x="746" y="312" width="18" height="24" rx="2"/>
+            <rect x="784" y="312" width="18" height="24" rx="2"/>
           </g>
 
           <!-- Bollards -->
           <g fill="#3a2810" stroke="#1c1408" stroke-width="1">
-            <circle cx="337" cy="148" r="4.5"/><circle cx="407" cy="148" r="4.5"/>
-            <circle cx="470" cy="148" r="4.5"/><circle cx="533" cy="148" r="4.5"/>
-            <circle cx="617" cy="148" r="4.5"/><circle cx="707" cy="148" r="4.5"/>
-            <circle cx="437" cy="384" r="4.5"/><circle cx="577" cy="384" r="4.5"/>
-            <circle cx="717" cy="384" r="4.5"/>
+            <circle cx="375" cy="83"  r="4.5"/><circle cx="515" cy="83"  r="4.5"/>
+            <circle cx="665" cy="83"  r="4.5"/><circle cx="745" cy="83"  r="4.5"/>
+            <circle cx="395" cy="193" r="4.5"/><circle cx="560" cy="193" r="4.5"/>
+            <circle cx="720" cy="193" r="4.5"/>
+            <circle cx="485" cy="303" r="4.5"/><circle cx="595" cy="303" r="4.5"/>
+            <circle cx="645" cy="303" r="4.5"/><circle cx="755" cy="303" r="4.5"/>
           </g>
 
-          <!-- ALVO — vaga N/S entre dois barcos do pier norte -->
+          <!-- ALVO — vaga N/S no lado sul da fileira 3 -->
           <g id="target-piratas" opacity="0.8">
-            <rect x="436" y="150" width="68" height="164"
+            <rect x="570" y="360" width="100" height="230"
                   fill="none" stroke="#2ae07e" stroke-width="2"
                   stroke-dasharray="8 6" rx="3"/>
-            <text x="470" y="238" text-anchor="middle" font-size="12" font-family="monospace"
+            <text x="620" y="478" text-anchor="middle" font-size="12" font-family="monospace"
                   fill="#2ae07e" letter-spacing="3" opacity="0.9">VAGA</text>
-            <text x="470" y="252" text-anchor="middle" font-size="7" font-family="monospace"
+            <text x="620" y="492" text-anchor="middle" font-size="7" font-family="monospace"
                   fill="#2ae07e" letter-spacing="2" opacity="0.7">DOCK HERE</text>
-            <path d="M 470 300 L 470 288 M 465 295 L 470 288 L 475 295"
+            <path d="M 620 576 L 620 564 M 615 571 L 620 564 L 625 571"
                   fill="none" stroke="#2ae07e" stroke-width="1.5" opacity="0.7"/>
           </g>
 
-          <!-- Boias marcando a subida oeste -->
+          <!-- Boias de entrada: VERMELHA a oeste, VERDE a leste (decorativas) -->
           <g>
-            <circle cx="190" cy="500" r="7" fill="#b22020" stroke="#5a0a0a" stroke-width="1"/>
-            <circle cx="190" cy="498" r="2" fill="#ff8080"/>
-            <circle cx="190" cy="300" r="7" fill="#2a8a40" stroke="#0a3a18" stroke-width="1"/>
-            <circle cx="190" cy="298" r="2" fill="#80ffa0"/>
+            <circle cx="190" cy="615" r="7" fill="#b22020" stroke="#5a0a0a" stroke-width="1"/>
+            <circle cx="190" cy="613" r="2" fill="#ff8080"/>
+            <circle cx="450" cy="615" r="7" fill="#2a8a40" stroke="#0a3a18" stroke-width="1"/>
+            <circle cx="450" cy="613" r="2" fill="#80ffa0"/>
+          </g>
+
+          <!-- Barcos fundeados a SW (decorativos — sem colisão, longe da rota) -->
+          <g opacity="0.9">
+            <circle cx="110" cy="545" r="2.5" fill="#c8d0d8" opacity="0.7"/>
+            <path d="M 99 555 L 121 555 L 121 589 Q 121 605 110 611 Q 99 605 99 589 Z"
+                  fill="#e8ecef" stroke="#9ca8b0" stroke-width="0.8"/>
+            <rect x="104" y="561" width="12" height="24" fill="#6b4a22" opacity="0.8" rx="2"/>
+            <circle cx="60" cy="615" r="2.5" fill="#c8d0d8" opacity="0.7"/>
+            <path d="M 49 625 L 71 625 L 71 659 Q 71 675 60 681 Q 49 675 49 659 Z"
+                  fill="#f0e6c8" stroke="#9a8a60" stroke-width="0.8"/>
+            <rect x="54" y="631" width="12" height="24" fill="#6b4a22" opacity="0.8" rx="2"/>
           </g>
         </g><!-- /scn-piratas -->
 
@@ -940,27 +1026,28 @@ header p  { font-size:9px; letter-spacing:1.5px; color:#243a52; margin-top:6px; 
             <circle cx="462" cy="368" r="4.5"/><circle cx="537" cy="368" r="4.5"/>
           </g>
 
-          <!-- Posto de combustível: pier saindo da costa leste (x=570-700, y=288-312) -->
-          <rect x="575" y="293" width="130" height="26" fill="#000" opacity="0.35" rx="2"/>
-          <rect x="570" y="288" width="132" height="24" fill="url(#pPlanksH)" rx="2"/>
-          <rect x="570" y="288" width="132" height="4"  fill="#5a4020"/>
-          <rect x="570" y="308" width="132" height="4"  fill="#3e2c10"/>
+          <!-- Posto de combustível: pier saindo da costa leste (x=570-702, y=292-316) -->
+          <rect x="575" y="297" width="130" height="26" fill="#000" opacity="0.35" rx="2"/>
+          <rect x="570" y="292" width="132" height="24" fill="url(#pPlanksH)" rx="2"/>
+          <rect x="570" y="292" width="132" height="4"  fill="#5a4020"/>
+          <rect x="570" y="312" width="132" height="4"  fill="#3e2c10"/>
           <!-- Bomba de combustível (âmbar) -->
-          <rect x="652" y="292" width="12" height="16" fill="#e8a030" stroke="#7a5010" stroke-width="1" rx="2"/>
-          <circle cx="658" cy="297" r="3" fill="#7a5010"/>
-          <text x="620" y="304" text-anchor="middle" font-size="8" font-family="monospace"
+          <rect x="652" y="296" width="12" height="16" fill="#e8a030" stroke="#7a5010" stroke-width="1" rx="2"/>
+          <circle cx="658" cy="301" r="3" fill="#7a5010"/>
+          <text x="620" y="308" text-anchor="middle" font-size="8" font-family="monospace"
                 fill="#3e2c10" letter-spacing="1" font-weight="bold">FUEL</text>
 
           <!-- ALVO — encostar de lado no posto (proa L/O) -->
+          <!-- JS: cx=640 cy=240 halfW=115 halfH=52 → x=525-755, y=188-292 -->
           <g id="target-iate-sc" opacity="0.8">
-            <rect x="585" y="212" width="110" height="72"
+            <rect x="525" y="188" width="230" height="104"
                   fill="none" stroke="#2ae07e" stroke-width="2"
                   stroke-dasharray="8 6" rx="3"/>
-            <text x="640" y="244" text-anchor="middle" font-size="12" font-family="monospace"
+            <text x="640" y="236" text-anchor="middle" font-size="12" font-family="monospace"
                   fill="#2ae07e" letter-spacing="3" opacity="0.9">POSTO</text>
-            <text x="640" y="258" text-anchor="middle" font-size="7" font-family="monospace"
+            <text x="640" y="250" text-anchor="middle" font-size="7" font-family="monospace"
                   fill="#2ae07e" letter-spacing="2" opacity="0.7">REFUEL HERE</text>
-            <path d="M 640 296 L 640 286 M 635 292 L 640 286 L 645 292"
+            <path d="M 640 172 L 640 184 M 635 178 L 640 184 L 645 178"
                   fill="none" stroke="#2ae07e" stroke-width="1.5" opacity="0.7"/>
           </g>
 
@@ -2429,37 +2516,67 @@ const SCENARIOS = {
     dock:   { x: 450, y: 630, heading: 0 },
     // Vaga dimensionada p/ conter o MAIOR casco inteiro (Riostar 203px):
     // meio-comprimento no eixo do barco ≥112, transversal ≥45
-    target: { cx: 735, cy: 266, halfW: 112, halfH: 48, align: 'ew' },
+    // cx=726: centro recuado do cais leste p/ o Riostar (203px) caber
+    // inteiro na zona sem encostar nas defensas do quay (face em x=830)
+    target: { cx: 726, cy: 266, halfW: 112, halfH: 48, align: 'ew' },
     obstacles: OBSTACLES_CLASSICA,
   },
   'piratas': {
-    // Marina Piratas (Angra dos Reis): subir pelo lado oeste em águas abertas,
-    // entrar no canal entre os dois piers do norte e aproar na vaga N/S entre
-    // dois barcos aportados. Canal E/O tem ~110 px livres (barco 52×180).
+    // Marina Piratas (Angra dos Reis): partir entre as boias de entrada, subir
+    // ao norte pelo lado oeste do trapiche diagonal do heliponto, contornar o
+    // quiosque na ponta NW, seguir a leste pelo canal entre o trapiche e a
+    // fileira sul de piers (≥110 px) e aproar ao norte na vaga N/S (100×230).
     name: 'Marina Piratas', goal: 'Atracar na vaga',
-    dock:   { x: 110, y: 610, heading: 0 },
-    target: { cx: 470, cy: 235, halfW: 50, halfH: 115, align: 'ns' },
+    dock:   { x: 300, y: 650, heading: 0 },
+    target: { cx: 620, cy: 475, halfW: 50, halfH: 115, align: 'ns' },
     obstacles: [
-      // Costa / cais leste
-      { x: 820, y: 100, w: 74, h: 500, type: 'quay' },
-      // Pier norte (visual y=120-146) — tip oeste recolhido, lados inset
-      { x: 300 + FINGER_INSET_TIP, y: 120 + FINGER_INSET_SIDE, w: 500 - FINGER_INSET_TIP, h: 26 - 2*FINGER_INSET_SIDE, type: 'finger' },
-      // Pier sul (visual y=356-382)
-      { x: 380 + FINGER_INSET_TIP, y: 356 + FINGER_INSET_SIDE, w: 420 - FINGER_INSET_TIP, h: 26 - 2*FINGER_INSET_SIDE, type: 'finger' },
-      // Pier do heliponto (visual y=430-456) — tip leste recolhido
-      { x: 316, y: 430 + FINGER_INSET_SIDE, w: 304 - FINGER_INSET_TIP, h: 26 - 2*FINGER_INSET_SIDE, type: 'finger' },
+      // Costa / cais leste (Shopping Piratas)
+      { x: 810, y: 80, w: 84, h: 560, type: 'quay' },
+      // Fileiras 1-3 de piers (visual 26 tall) — tip oeste recolhido
+      { x: 330 + FINGER_INSET_TIP, y: 55  + FINGER_INSET_SIDE, w: 480 - FINGER_INSET_TIP, h: 26 - 2*FINGER_INSET_SIDE, type: 'finger' },
+      { x: 330 + FINGER_INSET_TIP, y: 165 + FINGER_INSET_SIDE, w: 480 - FINGER_INSET_TIP, h: 26 - 2*FINGER_INSET_SIDE, type: 'finger' },
+      { x: 330 + FINGER_INSET_TIP, y: 275 + FINGER_INSET_SIDE, w: 480 - FINGER_INSET_TIP, h: 26 - 2*FINGER_INSET_SIDE, type: 'finger' },
+      // Calçadão da costa SE ao heliponto (visual y=634-660)
+      { x: 555, y: 634 + FINGER_INSET_SIDE, w: 255, h: 26 - 2*FINGER_INSET_SIDE, type: 'finger' },
       // Plataforma do heliponto
-      { x: 240, y: 395, w: 76, h: 76, type: 'quay' },
-      // Barcos pendurados abaixo do pier norte (a vaga fica entre 424 e 516)
-      { x: 322, y: 150, w: 30, h: 80, type: 'boat' },
-      { x: 392, y: 150, w: 30, h: 80, type: 'boat' },
-      { x: 518, y: 150, w: 30, h: 80, type: 'boat' },
-      { x: 602, y: 150, w: 30, h: 80, type: 'boat' },
-      { x: 692, y: 150, w: 30, h: 80, type: 'boat' },
-      // Barcos abaixo do pier sul
-      { x: 422, y: 386, w: 30, h: 80, type: 'boat' },
-      { x: 562, y: 386, w: 30, h: 80, type: 'boat' },
-      { x: 702, y: 386, w: 30, h: 80, type: 'boat' },
+      { x: 470, y: 605, w: 85, h: 85, type: 'quay' },
+      // Quiosque redondo (círculo r=22 em 260,425 → AABB)
+      { x: 238, y: 403, w: 44, h: 44, type: 'quay' },
+      // Trapiche diagonal (260,425)→(470,605) — escadinha de 11 AABBs 24×24
+      { x: 248, y: 413, w: 24, h: 24, type: 'finger' },
+      { x: 269, y: 431, w: 24, h: 24, type: 'finger' },
+      { x: 290, y: 449, w: 24, h: 24, type: 'finger' },
+      { x: 311, y: 467, w: 24, h: 24, type: 'finger' },
+      { x: 332, y: 485, w: 24, h: 24, type: 'finger' },
+      { x: 353, y: 503, w: 24, h: 24, type: 'finger' },
+      { x: 374, y: 521, w: 24, h: 24, type: 'finger' },
+      { x: 395, y: 539, w: 24, h: 24, type: 'finger' },
+      { x: 416, y: 557, w: 24, h: 24, type: 'finger' },
+      { x: 437, y: 575, w: 24, h: 24, type: 'finger' },
+      { x: 458, y: 593, w: 24, h: 24, type: 'finger' },
+      // Barcos pequenos dos dois lados do trapiche (AABB dos cascos rotacionados)
+      { x: 263, y: 454, w: 55, h: 58, type: 'boat' },
+      { x: 343, y: 459, w: 55, h: 58, type: 'boat' },
+      { x: 347, y: 526, w: 55, h: 58, type: 'boat' },
+      { x: 420, y: 526, w: 55, h: 58, type: 'boat' },
+      // Barcos abaixo da fileira 1 (30×75)
+      { x: 360, y: 85, w: 30, h: 75, type: 'boat' },
+      { x: 430, y: 85, w: 30, h: 75, type: 'boat' },
+      { x: 500, y: 85, w: 30, h: 75, type: 'boat' },
+      { x: 570, y: 85, w: 30, h: 75, type: 'boat' },
+      { x: 650, y: 85, w: 30, h: 75, type: 'boat' },
+      { x: 730, y: 85, w: 30, h: 75, type: 'boat' },
+      // Barcos abaixo da fileira 2 (30×75)
+      { x: 380, y: 195, w: 30, h: 75, type: 'boat' },
+      { x: 455, y: 195, w: 30, h: 75, type: 'boat' },
+      { x: 545, y: 195, w: 30, h: 75, type: 'boat' },
+      { x: 625, y: 195, w: 30, h: 75, type: 'boat' },
+      { x: 705, y: 195, w: 30, h: 75, type: 'boat' },
+      // Barcos abaixo da fileira 3 (curtos 30×55) — só do flanco da vaga p/ leste,
+      // mantendo o corredor do quiosque (fileira nua a oeste: 403-290 = 113px)
+      { x: 470, y: 305, w: 30, h: 55, type: 'boat' },
+      { x: 740, y: 305, w: 30, h: 55, type: 'boat' },
+      { x: 778, y: 305, w: 30, h: 55, type: 'boat' },
     ],
   },
   'iate-sc': {
