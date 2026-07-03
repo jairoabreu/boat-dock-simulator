@@ -2371,8 +2371,30 @@ const boat = { x:DOCK.x, y:DOCK.y, heading:DOCK.heading, vx:0, vy:0, vr:0 };
 // colisão fantasma. Tip também recolhido para não "pegar" no canto ao entrar.
 const FINGER_INSET_TIP  = 10;
 const FINGER_INSET_SIDE = 11;  // 28 tall → 6 tall de colisão efetiva
-const HULL_PAD = 3;            // folga extra no casco (px subtraídos de extX/extY)
+const HULL_PAD = 3;            // folga extra no casco (px subtraídos dos semi-eixos)
 const GAMEOVER_IMPACT = 0.5;   // px/frame — impacto acima disso = game over (abaixo = raspão nas defensas)
+const HULL_RESTITUTION = 0.05; // quique nas defensas (quase inelástico)
+const HULL_POINTS = 16;        // amostras do perímetro do casco
+
+// Pontos do perímetro do casco (elipse) em coordenadas do mundo.
+// Usados na colisão ponto-a-ponto e no teste de "barco inteiro na vaga".
+// φ=0 é a proa; s = boreste, f = avante (halfW/halfH do perfil ativo).
+function hullPoints() {
+  const cH = Math.cos(boat.heading), sH = Math.sin(boat.heading);
+  const sidX = cH, sidY = sH;          // direção boreste
+  const fwdX = sH, fwdY = -cH;         // direção proa
+  const hW = Math.max(2, currentProfile.halfW - HULL_PAD);
+  const hH = Math.max(2, currentProfile.halfH - HULL_PAD);
+  const pts = [];
+  for (let i = 0; i < HULL_POINTS; i++) {
+    const a = (i / HULL_POINTS) * 2 * Math.PI;
+    const s = hW * Math.sin(a);        // lateral
+    const f = hH * Math.cos(a);        // longitudinal (proa+)
+    pts.push({ x: boat.x + s * sidX + f * fwdX,
+               y: boat.y + s * sidY + f * fwdY });
+  }
+  return pts;
+}
 // Obstáculos do cenário "Marina Clássica" (mapa original)
 const OBSTACLES_CLASSICA = [
   // ── Marina oeste (quay x=6-70 y=40-540; 4 fingers visuais x=70-230) ──
@@ -2405,7 +2427,9 @@ const SCENARIOS = {
   'classica': {
     name: 'Marina Clássica', goal: 'Atracar na vaga',
     dock:   { x: 450, y: 630, heading: 0 },
-    target: { cx: 752.5, cy: 266, halfW: 70, halfH: 42, align: 'ew' },
+    // Vaga dimensionada p/ conter o MAIOR casco inteiro (Riostar 203px):
+    // meio-comprimento no eixo do barco ≥112, transversal ≥45
+    target: { cx: 735, cy: 266, halfW: 112, halfH: 48, align: 'ew' },
     obstacles: OBSTACLES_CLASSICA,
   },
   'piratas': {
@@ -2414,7 +2438,7 @@ const SCENARIOS = {
     // dois barcos aportados. Canal E/O tem ~110 px livres (barco 52×180).
     name: 'Marina Piratas', goal: 'Atracar na vaga',
     dock:   { x: 110, y: 610, heading: 0 },
-    target: { cx: 470, cy: 235, halfW: 30, halfH: 50, align: 'ns' },
+    target: { cx: 470, cy: 235, halfW: 50, halfH: 115, align: 'ns' },
     obstacles: [
       // Costa / cais leste
       { x: 820, y: 100, w: 74, h: 500, type: 'quay' },
@@ -2445,7 +2469,7 @@ const SCENARIOS = {
     // encostar de lado no posto de combustível a leste.
     name: 'Iate Clube SC', goal: 'Abastecer no posto',
     dock:   { x: 330, y: 450, heading: Math.PI },
-    target: { cx: 640, cy: 250, halfW: 55, halfH: 38, align: 'ew' },
+    target: { cx: 640, cy: 240, halfW: 115, halfH: 52, align: 'ew' },
     obstacles: [
       // Quebra-mar norte e oeste (pedra)
       { x: 60,  y: 60,  w: 640, h: 40,  type: 'quay' },
@@ -2575,40 +2599,50 @@ function updatePhysics() {
   if (boat.y < sceneR) { boat.y=sceneR; if(boat.vy<0){boat.vy*=-0.25;} }
   if (boat.y > SCENE_H-sceneR) { boat.y=SCENE_H-sceneR; if(boat.vy>0){boat.vy*=-0.25;} }
 
-  // Colisão com obstáculos — AABB rotacionada para o barco, AABB fixa para
-  // o obstáculo. Obstáculos: quay principal, 4 fingers e 2 barcos aportados.
-  // Envelope elíptico do casco (mais justo que AABB rotacionada para cascos
-  // alongados): rectangle-AABB overestima ~20% a mais em ângulos de 10-30°,
-  // criando "colisão fantasma" antes do contato visual. Elipse com semi-eixos
-  // (halfW, halfH) tem half-extent(θ) = √((halfW·sin)² + (halfH·cos)²).
-  const cH = Math.cos(boat.heading), sH = Math.sin(boat.heading);
-  const hW = currentProfile.halfW, hH = currentProfile.halfH;
-  const extX = Math.max(2, Math.sqrt((hW*cH)*(hW*cH) + (hH*sH)*(hH*sH)) - HULL_PAD);
-  const extY = Math.max(2, Math.sqrt((hW*sH)*(hW*sH) + (hH*cH)*(hH*cH)) - HULL_PAD);
+  // Colisão com obstáculos — contato por PONTOS DO CASCO (elipse amostrada)
+  // com resposta de corpo rígido. O modelo anterior (AABB do envelope) parava
+  // antes do contato visual em uns ângulos, atravessava em outros, e não
+  // gerava rotação quando um bordo encostava no pier. Aqui cada ponto do
+  // perímetro que invade um obstáculo recebe impulso normal no ponto de
+  // contato: força fora do centro → torque → o barco gira naturalmente
+  // ao raspar o pier com um bordo.
+  const pts = hullPoints();
+  // Momento de inércia relativo do casco (massa=1) — calibra quanto um toque
+  // fora do centro gira o barco.
+  const HULL_INERTIA = (currentProfile.halfW ** 2 + currentProfile.halfH ** 2) / 3;
   for (const o of OBSTACLES) {
-    if (boat.x - extX < o.x + o.w && boat.x + extX > o.x &&
-        boat.y - extY < o.y + o.h && boat.y + extY > o.y) {
-      const penRight = (o.x + o.w + extX) - boat.x;
-      const penLeft  = boat.x - (o.x - extX);
-      const penDown  = (o.y + o.h + extY) - boat.y;
-      const penUp    = boat.y - (o.y - extY);
-      const minPen = Math.min(penRight, penLeft, penDown, penUp);
-      // Grazing contact (< 1.5 px overlap): trata como raspão — snap posição e
-      // amortece a velocidade normal, sem quicar. Evita "esbarrada fantasma" no
-      // canto do finger ao entrar/sair do berço.
-      const graze = minPen < 1.5;
-      const resti = graze ? 0 : 0.2;
-      const damp  = graze ? 0.4 : 1.0;
-      // Velocidade de impacto: componente da velocidade na direção do contato
-      // (só conta se movendo PARA o obstáculo). Toque lento nas defensas =
-      // raspão tolerado; acima do limiar = colisão real → game over.
-      let impactSpd = 0;
-      if (minPen === penRight)      { impactSpd = boat.vx < 0 ? -boat.vx : 0; boat.x = o.x + o.w + extX; if (boat.vx < 0) boat.vx = Math.abs(boat.vx) * resti;  else boat.vx *= damp; }
-      else if (minPen === penLeft)  { impactSpd = boat.vx > 0 ?  boat.vx : 0; boat.x = o.x - extX;       if (boat.vx > 0) boat.vx = -Math.abs(boat.vx) * resti; else boat.vx *= damp; }
-      else if (minPen === penDown)  { impactSpd = boat.vy < 0 ? -boat.vy : 0; boat.y = o.y + o.h + extY; if (boat.vy < 0) boat.vy = Math.abs(boat.vy) * resti;  else boat.vy *= damp; }
-      else                          { impactSpd = boat.vy > 0 ?  boat.vy : 0; boat.y = o.y - extY;       if (boat.vy > 0) boat.vy = -Math.abs(boat.vy) * resti; else boat.vy *= damp; }
-      boat.vr *= graze ? 0.85 : 0.5;
-      if (impactSpd > GAMEOVER_IMPACT && !gameOver && chronoEnd === null) triggerGameOver(o.type);
+    // Broad-phase: círculo envolvente
+    const R = currentProfile.halfH + 4;
+    if (boat.x + R < o.x || boat.x - R > o.x + o.w ||
+        boat.y + R < o.y || boat.y - R > o.y + o.h) continue;
+    for (const p of pts) {
+      if (p.x <= o.x || p.x >= o.x + o.w || p.y <= o.y || p.y >= o.y + o.h) continue;
+      // Menor eixo de saída para o ponto
+      const dxL = p.x - o.x, dxR = o.x + o.w - p.x;
+      const dyT = p.y - o.y, dyB = o.y + o.h - p.y;
+      const m = Math.min(dxL, dxR, dyT, dyB);
+      let nx = 0, ny = 0;
+      if (m === dxL) nx = -1; else if (m === dxR) nx = 1;
+      else if (m === dyT) ny = -1; else ny = 1;
+      // Empurra o barco (e os pontos restantes) para fora
+      boat.x += nx * m; boat.y += ny * m;
+      for (const q of pts) { q.x += nx * m; q.y += ny * m; }
+      // Velocidade do ponto de contato = v + ω×r (2D)
+      const rx = p.x - boat.x, ry = p.y - boat.y;
+      const pvx = boat.vx - boat.vr * ry;
+      const pvy = boat.vy + boat.vr * rx;
+      const vn = pvx * nx + pvy * ny;
+      if (vn < 0) {           // movendo PARA dentro do obstáculo
+        const impactSpd = -vn;
+        const rCrossN = rx * ny - ry * nx;
+        const j = -(1 + HULL_RESTITUTION) * vn / (1 + rCrossN * rCrossN / HULL_INERTIA);
+        boat.vx += j * nx;
+        boat.vy += j * ny;
+        boat.vr += rCrossN * j / HULL_INERTIA;
+        // Atrito das defensas: mata devagar o deslizamento tangencial
+        boat.vx *= 0.985; boat.vy *= 0.985; boat.vr *= 0.92;
+        if (impactSpd > GAMEOVER_IMPACT && !gameOver && chronoEnd === null) triggerGameOver(o.type);
+      }
     }
   }
 
@@ -2736,7 +2770,8 @@ const infoPos = document.getElementById('info-pos');
 // e fica paralelo ao cais leste (proa apontada para leste OU oeste aceita).
 // Campos mutados por applyScenario() conforme o cenário ativo.
 // align: 'ew' = proa leste/oeste aceita; 'ns' = proa norte/sul aceita.
-const TARGET = { cx: 752.5, cy: 266, halfW: 70, halfH: 42, align: 'ew' };
+// Preenchido por applyScenario() a partir do cenário ativo (START chama).
+const TARGET = { cx: 0, cy: 0, halfW: 1, halfH: 1, align: 'ew' };
 
 // ── Troca de cenário: alterna arte SVG, obstáculos, dock e alvo ──
 function applyScenario(id) {
@@ -2804,11 +2839,9 @@ function updateChrono() {
   // Atualiza display enquanto corre
   chronoValEl.textContent = fmtChrono(now - chronoStart);
 
-  // Verifica atracação: centro do barco dentro da vaga, velocidade baixa,
-  // proa alinhada com o eixo do cenário (±25°): 'ew' = leste/oeste,
-  // 'ns' = norte/sul (0° ou 180°)
-  const dx = Math.abs(boat.x - TARGET.cx);
-  const dy = Math.abs(boat.y - TARGET.cy);
+  // Verifica atracação: o BARCO INTEIRO (todos os pontos do casco) dentro
+  // da vaga, velocidade baixa, proa alinhada com o eixo do cenário (±25°):
+  // 'ew' = leste/oeste, 'ns' = norte/sul (0° ou 180°)
   const spd = Math.hypot(boat.vx, boat.vy);
   // heading normalizado: 0=norte, π/2=leste, π=sul, 3π/2=oeste
   const h = ((boat.heading % (2*Math.PI)) + 2*Math.PI) % (2*Math.PI);
@@ -2824,7 +2857,10 @@ function updateChrono() {
     aligned = Math.min(dEast, dWest) < TOL;
   }
 
-  const inBerth = dx < TARGET.halfW && dy < TARGET.halfH && spd < 0.35 && aligned;
+  const fullyInside = hullPoints().every(p =>
+    Math.abs(p.x - TARGET.cx) < TARGET.halfW &&
+    Math.abs(p.y - TARGET.cy) < TARGET.halfH);
+  const inBerth = fullyInside && spd < 0.35 && aligned;
   if (inBerth) {
     dockHoldMs += dt;
     if (dockHoldMs >= DOCK_HOLD_REQUIRED) {
@@ -3467,7 +3503,7 @@ function saveDiffProfiles() {
   localStorage.setItem(DIFF_PROFILES_KEY, JSON.stringify(diffProfiles.filter(p => !p.locked)));
 }
 function getDiffProfile(id) {
-  return diffProfiles.find(p => p.id === id) || diffProfiles[0];
+  return diffProfiles.find(p => p.id === id) || diffProfiles[0] || BUILTIN_DIFF[0];
 }
 
 // Escreve nos sliders de Ambiente e dispara 'input' — os handlers cuidam de
@@ -3846,6 +3882,8 @@ document.getElementById('btn-cancel-pause').addEventListener('click', cancelMane
 // ══════════════════════════════════════════════════
 applyVesselProfile(currentVesselId);
 initManeteDetents();
+loadDiffProfiles();               // antes de applyScenario (ranking usa a categoria)
+applyScenario(currentScenarioId);
 gameLoop();
 showStartModal();
 refreshSideRanking();
