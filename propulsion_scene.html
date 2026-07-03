@@ -339,12 +339,22 @@ header p  { font-size:9px; letter-spacing:1.5px; color:#243a52; margin-top:6px; 
   width:230px; background:#0a1624; border:1px solid #142238;
   border-radius:12px; padding:12px 14px;
   display:flex; flex-direction:column; gap:8px;
+  /* Acima do overlay dos modais (z 1000) → fica nítido, não desfocado,
+     durante a tela de nome/resultado */
+  position:relative; z-index:1001;
+  box-shadow:0 0 30px #00000066;
 }
 .ranking-panel-title {
   font-size:10px; letter-spacing:2px; color:#4a8ab0;
   text-transform:uppercase; text-align:center;
 }
-.ranking-list.side { max-height:560px; }
+.ranking-list.side { max-height:600px; overflow-y:auto; }
+.ranking-gender-sec { margin-bottom:8px; }
+.ranking-gender-hdr {
+  font-size:9px; letter-spacing:1.5px; text-transform:uppercase;
+  color:#5a9ac8; padding:3px 0 3px; margin-bottom:3px;
+  border-bottom:1px solid #12283c;
+}
 .modal-section-lbl {
   font-size:8px; letter-spacing:2px; color:#1e4060; text-transform:uppercase;
   text-align:left; width:100%;
@@ -1928,7 +1938,7 @@ header p  { font-size:9px; letter-spacing:1.5px; color:#243a52; margin-top:6px; 
 
   <!-- ══════════════ RANKING LATERAL ══════════════ -->
   <div class="ranking-panel">
-    <div class="ranking-panel-title">🏆 Ranking · Top 20</div>
+    <div class="ranking-panel-title">🏆 Ranking · Top 10</div>
     <div class="ranking-cat-hdr" id="side-ranking-cat">—</div>
     <div class="ranking-list side" id="side-ranking"></div>
   </div>
@@ -3886,20 +3896,35 @@ function renderRanking(container, entries, highlightMs) {
   renderRankingEntries(container, entries, highlightMs);
 }
 
-// Painel lateral: top 20 da categoria ativa, sempre visível
+// Painel lateral: top 10 masculino E feminino do circuito atual
+// (dificuldade + controle), sempre visível — inclusive na tela de nome.
 function refreshSideRanking() {
   const catEl  = document.getElementById('side-ranking-cat');
   const listEl = document.getElementById('side-ranking');
   if (!catEl || !listEl) return;
-  const cat = currentCategory();
-  catEl.textContent = categoryLabel(cat);
+  const base = currentCategory();
+  // Cabeçalho sem gênero — o gênero vira as duas seções abaixo
+  catEl.textContent = `${base.scenario} · ${base.difficulty} · ${CTRL_LABELS[base.control] || base.control}`;
+  const all = loadRanking();
   listEl.innerHTML = '';
-  const top = filterByCategory(loadRanking(), cat).slice(0, 20);
-  if (!top.length) {
-    listEl.innerHTML = '<div style="text-align:center;color:#1e4060;font-size:11px;padding:10px">Sem registros nesta categoria</div>';
-    return;
+  for (const g of ['m', 'f']) {
+    const sec = document.createElement('div');
+    sec.className = 'ranking-gender-sec';
+    const hdr = document.createElement('div');
+    hdr.className = 'ranking-gender-hdr';
+    hdr.textContent = (g === 'm' ? '♂ ' : '♀ ') + GENDER_LABELS[g];
+    sec.appendChild(hdr);
+    const top = filterByCategory(all, { ...base, gender: g }).slice(0, 10);
+    if (!top.length) {
+      const empty = document.createElement('div');
+      empty.style.cssText = 'text-align:center;color:#1e4060;font-size:10px;padding:6px';
+      empty.textContent = 'Sem registros';
+      sec.appendChild(empty);
+    } else {
+      renderRankingEntries(sec, top);
+    }
+    listEl.appendChild(sec);
   }
-  renderRankingEntries(listEl, top);
 }
 
 // ── Modais ──
