@@ -91,6 +91,8 @@ header p  { font-size:9px; letter-spacing:1.5px; color:#243a52; margin-top:6px; 
   transition:border-color .2s, color .2s;
 }
 .btn-pause:hover { border-color:#2a6080; color:#7ab0d0; }
+.btn-cancel { right:146px; font-size:13px; }
+.btn-cancel:hover { border-color:#a03030; color:#e06060; }
 .pause-overlay {
   position:absolute; inset:0; z-index:50;
   background:#050c16d8; backdrop-filter:blur(3px);
@@ -328,6 +330,18 @@ header p  { font-size:9px; letter-spacing:1.5px; color:#243a52; margin-top:6px; 
 .sel-btn.active.diff-hard  { border-color:#e84040; color:#e84040; }
 .sel-btn.active.diff-custom{ border-color:#4a8ab0; color:#7ab0d0; }
 .sel-btn.active.ctrl-btn   { border-color:#4a8ab0; color:#7ab0d0; }
+.sel-btn.active.gender-btn { border-color:#4a8ab0; color:#7ab0d0; }
+/* ── RANKING LATERAL ── */
+.ranking-panel {
+  width:230px; background:#0a1624; border:1px solid #142238;
+  border-radius:12px; padding:12px 14px;
+  display:flex; flex-direction:column; gap:8px;
+}
+.ranking-panel-title {
+  font-size:10px; letter-spacing:2px; color:#4a8ab0;
+  text-transform:uppercase; text-align:center;
+}
+.ranking-list.side { max-height:560px; }
 .modal-section-lbl {
   font-size:8px; letter-spacing:2px; color:#1e4060; text-transform:uppercase;
   text-align:left; width:100%;
@@ -450,12 +464,14 @@ header p  { font-size:9px; letter-spacing:1.5px; color:#243a52; margin-top:6px; 
         <div class="chrono-val" id="chrono-val">00:00.0</div>
       </div>
       <button class="btn-pause" id="btn-pause" title="Pausar (P)">⏸</button>
+      <button class="btn-pause btn-cancel" id="btn-cancel" title="Cancelar manobra">✕</button>
 
       <!-- Overlay de pausa -->
       <div class="pause-overlay hidden" id="pause-overlay">
         <div class="pause-lbl">⏸ Pausado</div>
         <div class="pause-sub">cronômetro parado</div>
         <button class="modal-btn-primary" id="btn-resume" style="width:220px">▶ Continuar</button>
+        <button class="modal-btn-secondary" id="btn-cancel-pause" style="width:220px">✕ Cancelar Manobra</button>
       </div>
 
       <!-- Background: water + pier -->
@@ -1614,6 +1630,13 @@ header p  { font-size:9px; letter-spacing:1.5px; color:#243a52; margin-top:6px; 
     <button class="btn-reset" id="btn-reset">⊕ Zerar Comandos</button>
   </div><!-- /controls -->
 
+  <!-- ══════════════ RANKING LATERAL ══════════════ -->
+  <div class="ranking-panel">
+    <div class="ranking-panel-title">🏆 Ranking · Top 20</div>
+    <div class="ranking-cat-hdr" id="side-ranking-cat">—</div>
+    <div class="ranking-list side" id="side-ranking"></div>
+  </div>
+
 </div><!-- /main -->
 
 <!-- ═══ MODAL: NOME DO JOGADOR ═══ -->
@@ -1622,6 +1645,11 @@ header p  { font-size:9px; letter-spacing:1.5px; color:#243a52; margin-top:6px; 
     <img src="logo-wordmark-white.png" alt="Marine Telematics" style="height:26px;width:auto;display:block;margin:0 auto 2px">
     <div class="modal-sub" style="margin-bottom:2px">Maneuvering Simulator · Digite seu nome para iniciar</div>
     <input class="modal-input" id="player-name-input" type="text" placeholder="Seu nome" maxlength="24" autocomplete="off">
+    <div class="modal-section-lbl">Gênero</div>
+    <div class="sel-grid" id="gender-selector">
+      <button class="sel-btn gender-btn active" data-gender="m">Masculino</button>
+      <button class="sel-btn gender-btn" data-gender="f">Feminino</button>
+    </div>
     <div class="modal-row">
       <span class="modal-section-lbl">Dificuldade</span>
       <button class="link-btn" id="btn-edit-profiles">✎ Editar perfis</button>
@@ -3151,7 +3179,7 @@ function renderDiffSelector() {
       : `${p.windSpd > 0 ? '💨' + p.windSpd + '%' : '💨—'} ${p.curSpd > 0 ? '🌊' + p.curSpd + '%' : '🌊—'}`;
     btn.innerHTML = `<strong style="font-size:10px">${p.name}</strong><br>`
                   + `<span style="opacity:.55;font-size:8px">${sub}</span>`;
-    btn.onclick = () => { selectedDiffId = p.id; renderDiffSelector(); };
+    btn.onclick = () => { selectedDiffId = p.id; renderDiffSelector(); refreshSideRanking(); };
     container.appendChild(btn);
   });
 }
@@ -3161,6 +3189,7 @@ function selectCtrl(type) {
   document.querySelectorAll('.ctrl-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.ctrl === type);
   });
+  refreshSideRanking();
 }
 
 // ── Funções de troca de modo de controle ──
@@ -3282,9 +3311,41 @@ document.querySelectorAll('.ctrl-btn').forEach(b => {
   b.addEventListener('click', () => selectCtrl(b.dataset.ctrl));
 });
 
+// ── Gênero ──
+let selectedGender = 'm';
+const GENDER_LABELS = { m: 'Masculino', f: 'Feminino' };
+
+function selectGender(g) {
+  selectedGender = g;
+  document.querySelectorAll('.gender-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.gender === g);
+  });
+  refreshSideRanking();
+}
+document.querySelectorAll('.gender-btn').forEach(b => {
+  b.addEventListener('click', () => selectGender(b.dataset.gender));
+});
+
 // ── Ranking ──
 let currentPlayer = '';
 const RANKING_KEY = 'matel-ranking-v2';
+
+// Categoria ativa = dificuldade + controle + gênero
+function currentCategory() {
+  return {
+    difficulty: getDiffProfile(selectedDiffId).name,
+    control:    selectedCtrlType,
+    gender:     selectedGender,
+  };
+}
+function categoryLabel(cat) {
+  return `${cat.difficulty} · ${CTRL_LABELS[cat.control] || cat.control} · ${GENDER_LABELS[cat.gender] || '—'}`;
+}
+function filterByCategory(entries, cat) {
+  return entries.filter(e => e.difficulty === cat.difficulty
+                          && e.control    === cat.control
+                          && e.gender     === cat.gender);
+}
 
 function loadRanking() {
   try { return JSON.parse(localStorage.getItem(RANKING_KEY) || '[]'); }
@@ -3295,37 +3356,51 @@ function saveRanking(entries) {
 }
 function addRankingEntry(name, ms) {
   const all = loadRanking();
+  const cat = currentCategory();
   const entry = {
-    name, ms,
-    difficulty: getDiffProfile(selectedDiffId).name,
-    control:    selectedCtrlType,
-    vessel:     vesselProfiles[currentVesselId]?.name ?? '',
+    name, ms, ...cat,
+    vessel: vesselProfiles[currentVesselId]?.name ?? '',
   };
   all.push(entry);
   all.sort((a, b) => a.ms - b.ms);
-  saveRanking(all.slice(0, 200));
-  return all
-    .filter(e => e.difficulty === entry.difficulty && e.control === entry.control)
-    .slice(0, 10);
+  saveRanking(all.slice(0, 400));
+  return filterByCategory(all, cat).slice(0, 10);
 }
-function renderRanking(container, entries, highlightMs) {
-  const dp = getDiffProfile(selectedDiffId);
-  const ctrlLbl = CTRL_LABELS[selectedCtrlType] || selectedCtrlType;
-  container.innerHTML = `<div class="ranking-cat-hdr">${dp.name} · ${ctrlLbl}</div>`;
-  if (!entries.length) {
-    container.innerHTML += '<div style="text-align:center;color:#1e4060;font-size:11px;padding:10px">Sem registros nesta categoria</div>';
-    return;
-  }
+function renderRankingEntries(container, entries, highlightMs) {
   entries.forEach((e, i) => {
     const div = document.createElement('div');
     div.className = 'ranking-entry' + (i===0?' gold':i===1?' silver':i===2?' bronze':'');
-    if (e.ms === highlightMs && e.name === currentPlayer) div.classList.add('current');
+    if (highlightMs !== undefined && e.ms === highlightMs && e.name === currentPlayer) div.classList.add('current');
     const medal = i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1)+'.';
     div.innerHTML = '<span class="ranking-pos">' + medal + '</span>'
                   + '<span class="ranking-name">' + e.name + '</span>'
                   + '<span class="ranking-time">' + fmtChrono(e.ms) + '</span>';
     container.appendChild(div);
   });
+}
+function renderRanking(container, entries, highlightMs) {
+  container.innerHTML = `<div class="ranking-cat-hdr">${categoryLabel(currentCategory())}</div>`;
+  if (!entries.length) {
+    container.innerHTML += '<div style="text-align:center;color:#1e4060;font-size:11px;padding:10px">Sem registros nesta categoria</div>';
+    return;
+  }
+  renderRankingEntries(container, entries, highlightMs);
+}
+
+// Painel lateral: top 20 da categoria ativa, sempre visível
+function refreshSideRanking() {
+  const catEl  = document.getElementById('side-ranking-cat');
+  const listEl = document.getElementById('side-ranking');
+  if (!catEl || !listEl) return;
+  const cat = currentCategory();
+  catEl.textContent = categoryLabel(cat);
+  listEl.innerHTML = '';
+  const top = filterByCategory(loadRanking(), cat).slice(0, 20);
+  if (!top.length) {
+    listEl.innerHTML = '<div style="text-align:center;color:#1e4060;font-size:11px;padding:10px">Sem registros nesta categoria</div>';
+    return;
+  }
+  renderRankingEntries(listEl, top);
 }
 
 // ── Modais ──
@@ -3375,6 +3450,7 @@ function hideStartModal() {
   updateManeteVisual('port'); updateManeteVisual('stbd');
   document.querySelectorAll('.thr-btn').forEach(b => b.classList.remove('active'));
   chronoReset();
+  refreshSideRanking();
 }
 
 function showFinishModal(ms) {
@@ -3383,6 +3459,7 @@ function showFinishModal(ms) {
   finishTimeEl.textContent = fmtChrono(ms);
   renderRanking(finishRankingEl, entries, ms);
   finishModal.classList.remove('hidden');
+  refreshSideRanking();
 }
 
 document.getElementById('btn-start-game').addEventListener('click', hideStartModal);
@@ -3394,6 +3471,20 @@ document.getElementById('btn-play-again').addEventListener('click', () => {
   showStartModal();
 });
 
+// ── Cancelar manobra: volta para a etapa do nome ──
+function cancelManeuver() {
+  document.getElementById('pause-overlay').classList.add('hidden');
+  document.getElementById('modal-gameover').classList.add('hidden');
+  finishModal.classList.add('hidden');
+  boat.x = DOCK.x; boat.y = DOCK.y; boat.heading = DOCK.heading;
+  boat.vx = 0; boat.vy = 0; boat.vr = 0;
+  chronoReset();               // também sai do pause e limpa gameOver
+  playerNameInput.value = currentPlayer;
+  showStartModal();
+}
+document.getElementById('btn-cancel').addEventListener('click', cancelManeuver);
+document.getElementById('btn-cancel-pause').addEventListener('click', cancelManeuver);
+
 // ══════════════════════════════════════════════════
 // START — aplica perfil depois de todas as variáveis declaradas
 // ══════════════════════════════════════════════════
@@ -3401,6 +3492,7 @@ applyVesselProfile(currentVesselId);
 initManeteDetents();
 gameLoop();
 showStartModal();
+refreshSideRanking();
 </script>
 </body>
 </html>
