@@ -27,7 +27,10 @@ for d in "${CONTEXTOS[@]}"; do
   cd "$d" || continue
   id=$(python3 "$HOME/MaTel/tools/qms.py" proxima 2>/dev/null) || continue
   echo "$(date '+%F %T') [$(basename "$d")] cartão #$id atribuído — executando" >> "$LOG"
-  if ! claude --dangerously-skip-permissions -p "/executar $id" < /dev/null >> "$LOG" 2>&1; then
+  set -o pipefail
+  if ! claude --dangerously-skip-permissions -p "/executar $id" \
+        --output-format stream-json --verbose < /dev/null 2>> "$LOG" \
+        | python3 "$HOME/MaTel/tools/qms_narra.py" "$id" >> "$LOG"; then
     echo "$(date '+%F %T') [$(basename "$d")] FALHOU (login do CLI? rede?) — cartão fica em A fazer p/ nova tentativa" >> "$LOG"
   fi
   echo "$(date '+%F %T') [$(basename "$d")] cartão #$id: sessão encerrada (veja o resultado no quadro)" >> "$LOG"
