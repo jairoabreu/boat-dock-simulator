@@ -160,12 +160,16 @@ def cmd_proxima(tok, pid):
     meu_id, _ = quem_sou(tok)
     p = quadro(tok, pid)
     cols = p.get("columns", [])
+    PRIO = {"high": 0, "med": 1, "low": 2}
     def minha(col_substr):
+        """Minhas tarefas da coluna, por PRIORIDADE (high>med>low>sem) e, no
+        empate, pela POSIÇÃO no quadro (de cima p/ baixo — a API já entrega
+        ordenado por position; o sort é estável e preserva isso)."""
         hit = [c for c in cols if col_substr in c.get("title", "").lower()]
-        for t in (hit[0].get("tasks", []) if hit else []):
-            if (t.get("assignee") or {}).get("id") == meu_id:
-                return t["id"]
-        return None
+        minhas = [t for t in (hit[0].get("tasks", []) if hit else [])
+                  if (t.get("assignee") or {}).get("id") == meu_id]
+        minhas.sort(key=lambda t: PRIO.get(t.get("priority"), 3))
+        return minhas[0]["id"] if minhas else None
     tid = minha("andamento")
     if tid is None:
         tid = minha("fazer")
