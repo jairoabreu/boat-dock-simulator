@@ -173,7 +173,12 @@ def cmd_proxima(tok, pid):
     tid = minha("andamento")
     if tid is None:
         tid = minha("fazer")
-    if tid is None and cols:
+    # Fallback p/ 1ª coluna SÓ em quadro sem coluna "fazer" nenhuma. Quando
+    # "A fazer" existe e está vazia, vazio é a resposta: Backlog e afins são
+    # ANTESSALA — cartão lá não dispara nem atribuído (05/08/2026: o fallback
+    # antigo pescou um cartão do Backlog recém-criado).
+    tem_fazer = any("fazer" in c.get("title", "").lower() for c in cols)
+    if tid is None and not tem_fazer and cols:
         for t in cols[0].get("tasks", []):
             if (t.get("assignee") or {}).get("id") == meu_id:
                 tid = t["id"]; break
