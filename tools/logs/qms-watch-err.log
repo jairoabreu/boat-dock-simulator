@@ -1,0 +1,5 @@
+/Users/jairoabreu/MaTel/tools/qms-watch.sh: line 37: LOG
+  fi
+  echo 2026-08-05: command not found
+/Users/jairoabreu/MaTel/tools/qms-watch.sh: line 38: syntax error near unexpected token `done'
+/Users/jairoabreu/MaTel/tools/qms-watch.sh: line 38: `done'

@@ -23,6 +23,12 @@ fi
 mkdir "$LOCK" 2>/dev/null || exit 0
 trap 'rm -rf "$LOCK"' EXIT
 
+# rede de segurança: quadro novo com cartão do Claudio e sem contexto? grita.
+IDS=$(for d in "${CONTEXTOS[@]}"; do python3 -c "import json;print(json.load(open('$d/.claude/qms.json'))['project_id'] or '')" 2>/dev/null; done | tr '\n' ' ')
+cd "${CONTEXTOS[0]}" && python3 "$HOME/MaTel/tools/qms.py" orfaos $IDS 2>/dev/null | while read -r av; do
+  echo "$(date '+%F %T') $av" >> "$LOG"
+done
+
 for d in "${CONTEXTOS[@]}"; do
   cd "$d" || continue
   id=$(python3 "$HOME/MaTel/tools/qms.py" proxima 2>/dev/null) || continue

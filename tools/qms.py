@@ -111,6 +111,30 @@ def acha_tarefa(p, tid):
     falha(f"tarefa {tid} não está no quadro '{p.get('name')}'")
 
 
+def cmd_orfaos(tok, conhecidos):
+    """Projetos com tarefa MINHA esperando (A fazer/Em andamento) cujo id NÃO
+    está em nenhum contexto vinculado — a rede de segurança contra cartão
+    criado num quadro novo e esquecido em silêncio."""
+    meu_id, _ = quem_sou(tok)
+    ps = req("GET", "/projects", token=tok)
+    itens = ps if isinstance(ps, list) else ps.get("items", ps.get("projects", []))
+    for pr in itens:
+        if pr.get("archived") or pr["id"] in conhecidos:
+            continue
+        q = quadro(tok, pr["id"])
+        n = 0
+        for col in q.get("columns", []):
+            tt = col.get("title", "").lower()
+            if "fazer" not in tt and "andamento" not in tt:
+                continue
+            n += sum(1 for t in col.get("tasks", [])
+                     if (t.get("assignee") or {}).get("id") == meu_id)
+        if n:
+            print(f"AVISO: projeto {pr['id']} '{pr.get('name')}' tem {n} "
+                  f"cartão(ões) do Claudio mas NENHUM contexto vinculado — "
+                  "vincular no Mac (qms.json + ronda do vigia)")
+
+
 def cmd_projetos(tok):
     ps = req("GET", "/projects", token=tok)
     itens = ps if isinstance(ps, list) else ps.get("items", ps.get("projects", []))
@@ -251,6 +275,8 @@ def main():
     tok = login()
     if cmd == "projetos":
         return cmd_projetos(tok)
+    if cmd == "orfaos":
+        return cmd_orfaos(tok, [int(x) for x in sys.argv[2:]])
     pid = cfg_projeto()
     if cmd == "proxima":
         return cmd_proxima(tok, pid)
