@@ -11,7 +11,7 @@ CONTEXTOS=(
   "$HOME/MaTel/matel-engine-panel"      # 18 iVS-LCD-StartStop
   "$HOME/MaTel/matel-ivs-gateway-fw"    #  9 CM06W
   "$HOME/CM2008"                        # 11 iVS-2008 (fora do ~/MaTel)
-  "$HOME/matel-web-platform-api"        # 29 Plataforma Web (frontend irmão: ~/MaTel-web_platform)
+  "$HOME/MaTel-web_platform"            # 29 Plataforma Web reescrita (contexto Nautica)
 )
 # matel-mobile e CM01 entram quando os quadros deles existirem no QMS
 
