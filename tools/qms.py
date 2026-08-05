@@ -8,7 +8,7 @@ https://matel.ind.br/projetos/<id>. As credenciais do usuário de serviço
 
 Uso (sempre a partir de dentro do repo do produto):
     qms.py projetos                     lista projetos visíveis (p/ mapear id)
-    qms.py demandas                     quadro do produto (colunas + tarefas)
+    qms.py demandas [todas]             minhas tarefas (ou o quadro inteiro)
     qms.py tarefa <id>                  detalhe: descrição + subtarefas
     qms.py mover <id> <coluna>          move o cartão (nome parcial serve)
     qms.py resultado <id> <texto...>    anexa "Resultado (Claude)" à descrição
@@ -90,6 +90,12 @@ def cfg_projeto():
           "do produto")
 
 
+def quem_sou(tok):
+    """id do usuário de serviço logado — as demandas são filtradas por ele."""
+    me = req("GET", "/auth/me", token=tok)
+    return me.get("id"), me.get("name", "Claude")
+
+
 def quadro(tok, pid):
     return req("GET", f"/projects/{pid}", token=tok)
 
@@ -110,11 +116,22 @@ def cmd_projetos(tok):
               f"{'  [arquivado]' if p.get('archived') else ''}")
 
 
-def cmd_demandas(tok, pid):
+def cmd_demandas(tok, pid, todas=False):
+    """Por padrão SÓ as tarefas cujo responsável é o usuário de serviço logado
+    — é o que permite vários "Claudes" dividirem o mesmo quadro sem um pegar
+    o cartão do outro. `demandas todas` mostra o quadro inteiro."""
+    meu_id, meu_nome = quem_sou(tok)
     p = quadro(tok, pid)
-    print(f"QUADRO: {p.get('name')} (projeto {pid})")
+    print(f"QUADRO: {p.get('name')} (projeto {pid})"
+          + ("" if todas else f" — tarefas de {meu_nome}"))
+    ocultas = 0
     for col in p.get("columns", []):
         ts = col.get("tasks", [])
+        if not todas:
+            minhas = [t for t in ts
+                      if (t.get("assignee") or {}).get("id") == meu_id]
+            ocultas += len(ts) - len(minhas)
+            ts = minhas
         print(f"\n== {col.get('title')} ({len(ts)}) ==")
         for t in ts:
             subs = t.get("subtasks", [])
@@ -128,11 +145,19 @@ def cmd_demandas(tok, pid):
                 extra.append(t["assignee"].get("name", ""))
             print(f"  #{t['id']:<5} {t['title']}"
                   f"{('  [' + ', '.join(extra) + ']') if extra else ''}")
+    if ocultas:
+        print(f"\n({ocultas} tarefa(s) de outros responsáveis ocultas — "
+              "veja tudo com: qms.py demandas todas)")
 
 
 def cmd_tarefa(tok, pid, tid):
+    meu_id, _ = quem_sou(tok)
     p = quadro(tok, pid)
     col, t = acha_tarefa(p, tid)
+    a = t.get("assignee") or {}
+    if a.get("id") != meu_id:
+        print(f"⚠️  responsável desta tarefa: {a.get('name') or 'ninguém'} — "
+              "NÃO é o usuário Claude deste posto. Confirme antes de executar.")
     print(f"#{t['id']} — {t['title']}\ncoluna: {col.get('title')}"
           f" | prioridade: {t.get('priority') or '—'}"
           f" | prazo: {t.get('due_date') or '—'}")
@@ -182,7 +207,8 @@ def main():
         return cmd_projetos(tok)
     pid = cfg_projeto()
     if cmd == "demandas":
-        return cmd_demandas(tok, pid)
+        return cmd_demandas(tok, pid, todas=(len(sys.argv) > 2 and
+                                             sys.argv[2] == "todas"))
     if cmd == "tarefa" and len(sys.argv) > 2:
         return cmd_tarefa(tok, pid, int(sys.argv[2]))
     if cmd == "mover" and len(sys.argv) > 3:
