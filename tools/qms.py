@@ -212,7 +212,7 @@ def cmd_mover(tok, pid, tid, alvo):
     dest = hit[0]
     req("POST", f"/projects/tasks/{tid}/move", token=tok,
         body={"column_id": dest["id"], "position": 0})
-    print(f"#{tid} -> '{dest['name']}'")
+    print(f"#{tid} -> '{dest['title']}'")
 
 
 def cmd_resultado(tok, pid, tid, texto):
