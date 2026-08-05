@@ -5,7 +5,6 @@
 # que executa o fluxo /executar (implementa, reporta no cartão, deixa em
 # "Em revisão" para o Jairo concluir). Um cartão por rodada, uma rodada por vez.
 LOG=~/MaTel/tools/logs/qms-watch.log
-LOCK=~/MaTel/tools/.qms-watch.lock
 CONTEXTOS=(
   "$HOME/MaTel/matel-ivs-display-p4"    # 26 iVS-LCD10.1
   "$HOME/MaTel/matel-engine-panel"      # 18 iVS-LCD-StartStop
@@ -16,13 +15,6 @@ CONTEXTOS=(
 # matel-mobile e CM01 entram quando os quadros deles existirem no QMS
 
 mkdir -p "$(dirname "$LOG")"
-# trava anti-sobreposição; trava com mais de 3h = execução morta, limpa e segue
-if [ -d "$LOCK" ] && [ -n "$(find "$LOCK" -maxdepth 0 -mmin +180 2>/dev/null)" ]; then
-  echo "$(date '+%F %T') trava velha removida (execução anterior morreu?)" >> "$LOG"
-  rm -rf "$LOCK"
-fi
-mkdir "$LOCK" 2>/dev/null || exit 0
-trap 'rm -rf "$LOCK"' EXIT
 
 # rede de segurança: quadro novo com cartão do Claudio e sem contexto? grita.
 IDS=$(for d in "${CONTEXTOS[@]}"; do python3 -c "import json;print(json.load(open('$d/.claude/qms.json'))['project_id'] or '')" 2>/dev/null; done | tr '\n' ' ')
@@ -32,7 +24,16 @@ done
 
 for d in "${CONTEXTOS[@]}"; do
   cd "$d" || continue
-  id=$(python3 "$HOME/MaTel/tools/qms.py" proxima 2>/dev/null) || continue
+  # TRAVA POR CONTEXTO: um voo por produto, produtos em paralelo — cartão web
+  # não espera voo de firmware (05/08/2026). Trava >3h = voo morto, limpa.
+  L="$d/.claude/.voo.lock"
+  if [ -d "$L" ] && [ -n "$(find "$L" -maxdepth 0 -mmin +180 2>/dev/null)" ]; then
+    echo "$(date '+%F %T') [$(basename "$d")] trava velha removida" >> "$LOG"
+    rm -rf "$L"
+  fi
+  mkdir "$L" 2>/dev/null || continue
+  trap 'rm -rf "$L"' EXIT
+  id=$(python3 "$HOME/MaTel/tools/qms.py" proxima 2>/dev/null) || { rm -rf "$L"; trap - EXIT; continue; }
   echo "$(date '+%F %T') [$(basename "$d")] cartão #$id atribuído — executando" >> "$LOG"
   set -o pipefail
   if ! claude --dangerously-skip-permissions -p "/executar $id" \
@@ -41,4 +42,5 @@ for d in "${CONTEXTOS[@]}"; do
     echo "$(date '+%F %T') [$(basename "$d")] FALHOU (login do CLI? rede?) — cartão fica em A fazer p/ nova tentativa" >> "$LOG"
   fi
   echo "$(date '+%F %T') [$(basename "$d")] cartão #$id: sessão encerrada (veja o resultado no quadro)" >> "$LOG"
+  rm -rf "$L"; trap - EXIT
 done
