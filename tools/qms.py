@@ -9,6 +9,8 @@ https://matel.ind.br/projetos/<id>. As credenciais do usuário de serviço
 Uso (sempre a partir de dentro do repo do produto):
     qms.py projetos                     lista projetos visíveis (p/ mapear id)
     qms.py demandas [todas]             minhas tarefas (ou o quadro inteiro)
+    qms.py proxima                      id do próximo cartão meu em "A fazer"
+                                        (só o número; sai 1 se não houver)
     qms.py tarefa <id>                  detalhe: descrição + subtarefas
     qms.py mover <id> <coluna>          move o cartão (nome parcial serve)
     qms.py resultado <id> <texto...>    anexa "Resultado (Claude)" à descrição
@@ -150,6 +152,20 @@ def cmd_demandas(tok, pid, todas=False):
               "veja tudo com: qms.py demandas todas)")
 
 
+def cmd_proxima(tok, pid):
+    """Próximo cartão MEU na coluna 'A fazer' (ou a 1ª coluna). Saída crua —
+    é o gatilho do vigia do piloto automático (tools/qms-watch.sh)."""
+    meu_id, _ = quem_sou(tok)
+    p = quadro(tok, pid)
+    cols = p.get("columns", [])
+    fazer = [c for c in cols if "fazer" in c.get("title", "").lower()] or cols[:1]
+    for t in fazer[0].get("tasks", []) if fazer else []:
+        if (t.get("assignee") or {}).get("id") == meu_id:
+            print(t["id"])
+            return
+    sys.exit(1)
+
+
 def cmd_tarefa(tok, pid, tid):
     meu_id, _ = quem_sou(tok)
     p = quadro(tok, pid)
@@ -206,6 +222,8 @@ def main():
     if cmd == "projetos":
         return cmd_projetos(tok)
     pid = cfg_projeto()
+    if cmd == "proxima":
+        return cmd_proxima(tok, pid)
     if cmd == "demandas":
         return cmd_demandas(tok, pid, todas=(len(sys.argv) > 2 and
                                              sys.argv[2] == "todas"))
