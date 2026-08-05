@@ -153,17 +153,29 @@ def cmd_demandas(tok, pid, todas=False):
 
 
 def cmd_proxima(tok, pid):
-    """Próximo cartão MEU na coluna 'A fazer' (ou a 1ª coluna). Saída crua —
-    é o gatilho do vigia do piloto automático (tools/qms-watch.sh)."""
+    """Próximo cartão MEU: primeiro os órfãos em 'Em andamento' (o vigia roda
+    UMA sessão por vez — cartão meu em andamento sem sessão viva = a anterior
+    morreu no meio; retomar), depois os novos em 'A fazer'. Saída crua — é o
+    gatilho do vigia (tools/qms-watch.sh)."""
     meu_id, _ = quem_sou(tok)
     p = quadro(tok, pid)
     cols = p.get("columns", [])
-    fazer = [c for c in cols if "fazer" in c.get("title", "").lower()] or cols[:1]
-    for t in fazer[0].get("tasks", []) if fazer else []:
-        if (t.get("assignee") or {}).get("id") == meu_id:
-            print(t["id"])
-            return
-    sys.exit(1)
+    def minha(col_substr):
+        hit = [c for c in cols if col_substr in c.get("title", "").lower()]
+        for t in (hit[0].get("tasks", []) if hit else []):
+            if (t.get("assignee") or {}).get("id") == meu_id:
+                return t["id"]
+        return None
+    tid = minha("andamento")
+    if tid is None:
+        tid = minha("fazer")
+    if tid is None and cols:
+        for t in cols[0].get("tasks", []):
+            if (t.get("assignee") or {}).get("id") == meu_id:
+                tid = t["id"]; break
+    if tid is None:
+        sys.exit(1)
+    print(tid)
 
 
 def cmd_tarefa(tok, pid, tid):
