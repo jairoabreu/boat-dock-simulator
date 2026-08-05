@@ -14,6 +14,7 @@ Uso (sempre a partir de dentro do repo do produto):
     qms.py tarefa <id>                  detalhe: descrição + subtarefas
     qms.py mover <id> <coluna>          move o cartão (nome parcial serve)
     qms.py resultado <id> <texto...>    anexa "Resultado (Claude)" à descrição
+    qms.py subtarefa <sub_id> feita|pendente   tica/destica o checkbox
 
 Sem dependências além da stdlib (urllib) — roda em qualquer contexto.
 """
@@ -224,6 +225,14 @@ def cmd_mover(tok, pid, tid, alvo):
     print(f"#{tid} -> '{dest['title']}'")
 
 
+def cmd_subtarefa(tok, sub_id, estado):
+    """Tica/destica o checkbox de uma subtarefa (id entre parênteses no
+    `tarefa <id>`). Regra da casa: TODA subtarefa realizada sai ticada."""
+    done = estado in ("feita", "done", "1", "true")
+    req("PUT", f"/projects/subtasks/{sub_id}", token=tok, body={"done": done})
+    print(f"subtarefa {sub_id}: {'✓ feita' if done else 'pendente'}")
+
+
 def cmd_resultado(tok, pid, tid, texto):
     p = quadro(tok, pid)
     _, t = acha_tarefa(p, tid)
@@ -252,6 +261,8 @@ def main():
         return cmd_tarefa(tok, pid, int(sys.argv[2]))
     if cmd == "mover" and len(sys.argv) > 3:
         return cmd_mover(tok, pid, int(sys.argv[2]), " ".join(sys.argv[3:]))
+    if cmd == "subtarefa" and len(sys.argv) > 3:
+        return cmd_subtarefa(tok, int(sys.argv[2]), sys.argv[3])
     if cmd == "resultado" and len(sys.argv) > 3:
         return cmd_resultado(tok, pid, int(sys.argv[2]), " ".join(sys.argv[3:]))
     print(__doc__)
