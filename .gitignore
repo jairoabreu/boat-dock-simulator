@@ -1,4 +1,17 @@
+# Repos de produto: git próprios, independentes deste workspace
+CM01/
+atc-radio-reader/
+matel-aviation-app/
+matel-aviation-fw/
+matel-engine-panel/
+matel-ivs-display-fw/
+matel-ivs-display-p4/
+matel-ivs-gateway-fw/
+matel-ivs-test28/
+matel-mobile/
+p4-c6-slave/
+p4-spike-wifi-ble/
+# Referência do fornecedor (não commitar) e binários soltos
+matel-p4-docs/
+refs/
 .DS_Store
-.claude/
-marineqms/
-*.log
