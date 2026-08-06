@@ -14,6 +14,9 @@ Uso (sempre a partir de dentro do repo do produto):
     qms.py tarefa <id>                  detalhe: descrição + subtarefas
     qms.py mover <id> <coluna>          move o cartão (nome parcial serve)
     qms.py resultado <id> <texto...>    anexa "Resultado (Claude)" à descrição
+    qms.py perguntas                    perguntas do piloto sem resposta
+                                        (linhas "task_id<TAB>texto")
+    qms.py pilot-log <id> <texto...>    posta linha no terminal do piloto
     qms.py subtarefa <sub_id> feita|pendente   tica/destica o checkbox
 
 Sem dependências além da stdlib (urllib) — roda em qualquer contexto.
@@ -267,6 +270,37 @@ def cmd_resultado(tok, pid, tid, texto):
     print(f"#{tid}: resultado registrado")
 
 
+def cmd_perguntas(tok, pid):
+    """Perguntas do "terminal do piloto" ainda SEM resposta (sem um pilot_log
+    posterior na mesma tarefa). Saída legível-por-máquina p/ o responder:
+    uma linha `task_id<TAB>texto` por pergunta, em ordem cronológica."""
+    qs = req("GET", f"/projects/{pid}/activities"
+             "?action=pilot_pergunta&sem_resposta=1&order=asc&limit=200", token=tok)
+    for a in (qs if isinstance(qs, list) else []):
+        texto = " ".join(((a.get("payload") or {}).get("texto") or "").split())
+        if texto:
+            print(f"{a.get('entity_id')}\t{texto}")
+
+
+def cmd_pilot_log(tok, pid, tid, texto):
+    """Posta uma linha no terminal do piloto de uma tarefa (usado como fallback
+    pelo responder quando precisa registrar algo diretamente)."""
+    req("POST", f"/projects/{pid}/activities", token=tok,
+        body={"action": "pilot_log", "entity_type": "task",
+              "entity_id": tid, "payload": {"texto": texto[:1500]}})
+    print(f"#{tid}: linha registrada no terminal")
+
+
+def cmd_pilot_resposta(tok, pid, tid, texto):
+    """Marca as perguntas da tarefa como RESPONDIDAS (pilot_resposta). Só isto
+    fecha uma pergunta em `perguntas`/sem_resposta — a narração do voo não conta.
+    O responder chama isto ao concluir com sucesso."""
+    req("POST", f"/projects/{pid}/activities", token=tok,
+        body={"action": "pilot_resposta", "entity_type": "task",
+              "entity_id": tid, "payload": {"texto": texto[:1500]}})
+    print(f"#{tid}: perguntas marcadas como respondidas")
+
+
 def main():
     if len(sys.argv) < 2:
         print(__doc__)
@@ -291,6 +325,12 @@ def main():
         return cmd_subtarefa(tok, int(sys.argv[2]), sys.argv[3])
     if cmd == "resultado" and len(sys.argv) > 3:
         return cmd_resultado(tok, pid, int(sys.argv[2]), " ".join(sys.argv[3:]))
+    if cmd == "perguntas":
+        return cmd_perguntas(tok, pid)
+    if cmd == "pilot-log" and len(sys.argv) > 3:
+        return cmd_pilot_log(tok, pid, int(sys.argv[2]), " ".join(sys.argv[3:]))
+    if cmd == "pilot-resposta" and len(sys.argv) > 3:
+        return cmd_pilot_resposta(tok, pid, int(sys.argv[2]), " ".join(sys.argv[3:]))
     print(__doc__)
     sys.exit(1)
 

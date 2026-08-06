@@ -60,7 +60,7 @@ def main():
         except Exception:
             tok = None
 
-    posta("🛫 voo iniciado")
+    posta(sys.argv[2] if len(sys.argv) > 2 else "🛫 voo iniciado")
     for ln in sys.stdin:
         ln = ln.strip()
         if not ln:
