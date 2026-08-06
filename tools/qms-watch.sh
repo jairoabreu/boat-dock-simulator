@@ -32,15 +32,21 @@ for d in "${CONTEXTOS[@]}"; do
     rm -rf "$L"
   fi
   mkdir "$L" 2>/dev/null || continue
-  trap 'rm -rf "$L"' EXIT
-  id=$(python3 "$HOME/MaTel/tools/qms.py" proxima 2>/dev/null) || { rm -rf "$L"; trap - EXIT; continue; }
+  id=$(python3 "$HOME/MaTel/tools/qms.py" proxima 2>/dev/null) || { rm -rf "$L"; continue; }
   echo "$(date '+%F %T') [$(basename "$d")] cartão #$id atribuído — executando" >> "$LOG"
-  set -o pipefail
-  if ! claude --dangerously-skip-permissions -p "/executar $id" \
-        --output-format stream-json --verbose < /dev/null 2>> "$LOG" \
-        | python3 "$HOME/MaTel/tools/qms_narra.py" "$id" >> "$LOG"; then
-    echo "$(date '+%F %T') [$(basename "$d")] FALHOU (login do CLI? rede?) — cartão fica em A fazer p/ nova tentativa" >> "$LOG"
-  fi
-  echo "$(date '+%F %T') [$(basename "$d")] cartão #$id: sessão encerrada (veja o resultado no quadro)" >> "$LOG"
-  rm -rf "$L"; trap - EXIT
+  # VOO EM BACKGROUND: o vigia lança e SAI — o launchd não dispara nova ronda
+  # enquanto a anterior vive, e um voo de 40 min em primeiro plano deixava os
+  # outros quadros órfãos (05/08/2026). A trava do contexto morre com o voo.
+  (
+    cd "$d" || exit 1
+    set -o pipefail
+    if ! claude --dangerously-skip-permissions -p "/executar $id" \
+          --output-format stream-json --verbose < /dev/null 2>> "$LOG" \
+          | python3 "$HOME/MaTel/tools/qms_narra.py" "$id" >> "$LOG"; then
+      echo "$(date '+%F %T') [$(basename "$d")] FALHOU (login do CLI? rede?) — cartão fica p/ nova tentativa" >> "$LOG"
+    fi
+    echo "$(date '+%F %T') [$(basename "$d")] cartão #$id: sessão encerrada (veja o resultado no quadro)" >> "$LOG"
+    rm -rf "$L"
+  ) &
 done
+# NÃO usar wait: o vigia sai já; AbandonProcessGroup no plist preserva os voos: os voos são disown implícito via launchd AbandonProcessGroup
