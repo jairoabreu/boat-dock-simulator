@@ -18,6 +18,9 @@ Uso (sempre a partir de dentro do repo do produto):
                                         (linhas "task_id<TAB>texto")
     qms.py pilot-log <id> <texto...>    posta linha no terminal do piloto
     qms.py subtarefa <sub_id> feita|pendente   tica/destica o checkbox
+    qms.py criar                        cria cartão (JSON no stdin: titulo,
+                                        descricao, prioridade, subtarefas[],
+                                        coluna="fazer", atribuir=true)
 
 Sem dependências além da stdlib (urllib) — roda em qualquer contexto.
 """
@@ -42,7 +45,11 @@ CRED = os.path.expanduser("~/.config/matelqms/claude.json")
 
 
 def falha(msg):
-    print(f"ERRO: {msg}")
+    # SEMPRE em stderr: os scripts do piloto capturam o stdout destes comandos
+    # (`perguntas`, `proxima`) e uma linha "ERRO: ..." no stdout virava id de
+    # cartão — o responder chegou a abrir voo com o texto do erro como título
+    # (06/08/2026). Falhou = stdout vazio + exit 1.
+    print(f"ERRO: {msg}", file=sys.stderr)
     sys.exit(1)
 
 
@@ -252,6 +259,31 @@ def cmd_mover(tok, pid, tid, alvo):
     print(f"#{tid} -> '{dest['title']}'")
 
 
+def cmd_criar(tok, pid):
+    """Cria um cartão a partir de JSON no stdin. É como o Claude decompõe uma
+    demanda longa do Jairo em cartões executáveis pela esteira."""
+    spec = json.load(sys.stdin)
+    p = quadro(tok, pid)
+    cols = p.get("columns", [])
+    alvo = (spec.get("coluna") or "fazer").lower()
+    hit = [c for c in cols if alvo in c.get("title", "").lower()] or cols[:1]
+    if not hit:
+        falha("quadro sem colunas")
+    body = {"title": spec["titulo"], "description": spec.get("descricao", ""),
+            "column_id": hit[0]["id"], "priority": spec.get("prioridade")}
+    if spec.get("atribuir", True):
+        meu_id, _ = quem_sou(tok)
+        body["assignee_id"] = meu_id
+    t = req("POST", f"/projects/{pid}/tasks", token=tok, body=body)
+    tid = t.get("id")
+    for st in spec.get("subtarefas", []):
+        req("POST", f"/projects/tasks/{tid}/subtasks", token=tok,
+            body={"title": st})
+    print(f"#{tid} criado em '{hit[0].get('title')}'"
+          f" [{spec.get('prioridade') or 'sem prioridade'}]"
+          f"{' +%d subtarefas' % len(spec.get('subtarefas', [])) if spec.get('subtarefas') else ''}")
+
+
 def cmd_subtarefa(tok, sub_id, estado):
     """Tica/destica o checkbox de uma subtarefa (id entre parênteses no
     `tarefa <id>`). Regra da casa: TODA subtarefa realizada sai ticada."""
@@ -321,6 +353,8 @@ def main():
         return cmd_tarefa(tok, pid, int(sys.argv[2]))
     if cmd == "mover" and len(sys.argv) > 3:
         return cmd_mover(tok, pid, int(sys.argv[2]), " ".join(sys.argv[3:]))
+    if cmd == "criar":
+        return cmd_criar(tok, pid)
     if cmd == "subtarefa" and len(sys.argv) > 3:
         return cmd_subtarefa(tok, int(sys.argv[2]), sys.argv[3])
     if cmd == "resultado" and len(sys.argv) > 3:
