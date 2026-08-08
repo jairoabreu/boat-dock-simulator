@@ -159,6 +159,25 @@ Mesma regra das outras duas pontas, aplicada aqui primeiro:
 Nenhuma dessas escolhe um destino em silêncio. Logs saem sempre no formato
 combinado: `uin 2608070000 @ 0x46`, com `?` na metade que faltar.
 
+### 5.1 Um serial, um endereço (08/08/2026, #153)
+
+O INV do CM06 na bancada anunciou a `uin 2608070000` em **0x46, 0x47, 0x48 e
+0x49 no mesmo ciclo**, a cada 35 s. Do lado da plataforma isso não vira quatro
+módulos: o serial é a identidade, e renumerar é MUDAR DE ENDEREÇO.
+
+- **Nada é criado.** O cadastro é achado pelo serial e só o `node_id` muda.
+- **O endereço leva junto o que estava preso a ele**: os canais do módulo, os
+  canais que o parque legado deixou pendurados em qualquer REPÓRTER do casco
+  naquele nó, e o snapshot ao vivo (descartado; a leitura seguinte repopula).
+- **A resposta traz o UIN uma vez só** — em `/hmi/state`, `/iot/active` e
+  `/devices/{id}/io/state` — no endereço do cadastro. Nó sem `uin` continua
+  intacto: no parque legado dois endereços sem identidade são dois módulos.
+
+Para o firmware isso quer dizer que **anunciar o mesmo serial em vários
+endereços não é ambíguo para a nuvem, mas continua sendo para o barramento**:
+quem resolve UIN→endereço na injeção do comando (CM06) e no toque (tela)
+precisa da tabela viva, e a última arbitragem é a que vale.
+
 ## 6. Ainda em aberto
 
 - A migração **084 não rodou** em dev nem em produção (esta máquina não tem
