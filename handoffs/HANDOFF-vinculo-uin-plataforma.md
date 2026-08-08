@@ -77,12 +77,36 @@ Resposta:
 
 ```json
 { "received": 2, "matched": 1, "created": 1, "renumbered": 1,
-  "learned": 0, "unidentified": 0, "config_changed": true, ... }
+  "learned": 0, "unidentified": 0, "conflicting": 0,
+  "config_changed": true, ... }
 ```
 
 **`config_changed: true` = puxe `/hmi/config` agora**, sem esperar o próximo
 poll. É o que fecha o ciclo "inventário → config" do handoff: o módulo que
 acabou de ser criado ou reendereçado já entra na config da mesma passada.
+
+### 3.1 O casamento é no CASCO INTEIRO (08/08/2026, #139)
+
+O barramento CAN é do casco, e o módulo fica pendurado no repórter que o
+cadastrou primeiro — o rastreador, o CM06 ou a própria tela. A nuvem procura
+o UIN reportado entre os módulos de **todos** os repórteres da embarcação.
+
+Enquanto ela olhava só os filhos do repórter canônico, a tela reportava o nó
+`0x46`/`uin 2608070000`, a nuvem não enxergava a placa que o **CM06** já
+tinha cadastrado, concluía "módulo novo" e tentava criar uma irmã com o mesmo
+`hw_id`. O índice único da migração 084 recusava no commit e a tela via
+`http=500` a cada 5 minutos, para sempre. Do lado do firmware **nada muda** —
+o mesmo corpo que dava 500 agora dá 200.
+
+`conflicting` **(campo novo)** conta o nó cuja identidade já está cadastrada
+em **outra embarcação**. O UIN é único no banco inteiro: a mesma placa em dois
+barcos é cadastro errado de um dos lados, e a nuvem não tem como adivinhar
+qual. Aquele nó fica de fora do cadastro e a resposta **continua 2xx** — um
+resíduo alheio não pode calar o resto do barramento. Quem resolve é o
+operador, na Automação IoT.
+
+**O inventário nunca devolve 500.** Conflito que só o índice do banco pega
+(duas telas do mesmo casco inventariando ao mesmo tempo) devolve **409**.
 
 O que o inventário faz do lado de cá, e vale a pena a tela saber:
 
