@@ -787,10 +787,43 @@ A **caixinha da chave é a exceção, e é QUADRADA** (correção do Jairo de 09
 fino é retangular (132×104, caixa de 96×82) e a comutadora fica **centrada nele,
 quadrada, do MESMO tamanho na aresta horizontal e na vertical**:
 
-> **`QD_CHAVE = 60 px`** de lado. Cabe nos dois vãos com folga (96 na
-> horizontal, 82 na vertical) e é 0,34 da largura da bateria — o "~1/3 da célula
-> grande" do mockup. **Tela e construtor usam ESTE número**, que é o que o
-> pedido do #219 cobra; do nosso lado ele é `CAIXA_CHAVE` em `io-grade.ts`.
+> **`QD_CHAVE = 88 px`** de lado (era 60 até o #221 — ver abaixo). **Tela e
+> construtor usam ESTE número**, que é o que o pedido do #219 cobra; do nosso
+> lado ele é `CAIXA_CHAVE` em `io-grade.ts`.
+
+#### O 60 virou 88 (revisão do Jairo no vidro, #221 do quadro 26)
+
+O 60 nunca foi medida — foi PALPITE de proporção, o "~1/3 da largura da
+bateria" do mockup. Montado no vidro ele ficou pequeno demais: três linhas
+(nome, lâmina, estado) espremidas, e o nome cortando com reticências. O Jairo
+aprovou o painel e recusou o tamanho.
+
+O teto de verdade **não é a margem da célula** (`QD_MARG_H/V`, que é a folga da
+BATERIA — e a chave não mora em célula): **é o FIO que sai da caixinha**. Entre
+a caixa da bateria e a da chave tem de sobrar **mais que um período do
+tracejado (18 px)**; com 18 ou menos o trecho vira um risco sem sentido, que é a
+mesma régua que o motor já cobra de todo trecho.
+
+O eixo apertado é o **vertical**, por dois motivos: o vão é 104 px (contra 132
+na horizontal) e a fileira larga é **149, ímpar** — o centro do trilho cai meio
+pixel para cima no arredondamento, então descer da célula para o vão dá 127 px
+de centro a centro e do vão para a célula de baixo dá **126**. Quem manda é o
+126:
+
+| lado | fio vertical | fio horizontal | veredito |
+|---|---|---|---|
+| 60 | 33 px | 54 px | folgado demais (o antigo) |
+| **88** | **19 px** | **40 px** | **passa — e é o maior que passa** |
+| 90 | 18 px | 39 px | reprova (18 não é > 18) |
+
+Do lado da tela isso está **provado pelo compilador**, não escrito à mão:
+`QD_FIO_H()/QD_FIO_V()` refazem a conta da malha com o mesmo arredondamento e
+dois `_Static_assert` cobram as duas pontas — que 88 passa, e que 90 **não**
+passaria (isto é, que 88 é o teto e não um número tímido).
+
+Ganho: ~1,47× de lado, 2,15× de área. A lâmina escala de 10 para 16 px e as três
+linhas ganham 28 px em cada direção — o corte de nome com reticências recua
+sozinho, sem mexer nas fontes nem nos espaçamentos do #219.
 
 A porta da "caixa ilegível" do §10.5 continua no código, mas nunca mais dispara
 pela arrumação: com o painel fixo, 174×127 é maior que o mínimo de 170×125 em
@@ -878,7 +911,8 @@ frente do firmware ser um desenho velho em vez de um desenho errado.
    banco, traduzindo para os trilhos pela tabela do §11.2. A `trilhos()` de
    vocês não muda — muda quem a chama.
 2. **Ler `pos.dir`** na chave e desenhar a caixinha **no vão**, centrada, no
-   tamanho fixo e QUADRADO de **60×60 px** (§11.2) — não o vão inteiro.
+   tamanho fixo e QUADRADO de **88×88 px** (§11.2 — era 60 até o #221; a tela
+   já está em 88) — não o vão inteiro.
 3. **Não desenhar lugar vazio** (§11.4). Nem célula, nem aresta, nem contorno.
 4. **Recusar `version` desconhecida** derrubando o quadro inteiro (§11.5).
 5. Opcional, e nosso palpite de que ajuda: quando a chave está no vão dos polos
