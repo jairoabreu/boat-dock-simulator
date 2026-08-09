@@ -544,3 +544,105 @@ sozinha na primeira leitura de cada barco.
 * UI: `apps/nautica/src/components/iot/EsquemaEletricoBuilder.tsx` (o palco em
   quadrantes, o modo "Ligar peças", o desenho de bateria automotiva) e a regra
   pura em `src/lib/api/io-grade.ts`.
+
+## 10. A malha deixou de ser HOMOGÊNEA: trilhos largos e finos
+
+> **Acréscimo de 09/08/2026 — cartão #212 (tela).** Isto **já está no firmware**
+> e **não pede nada de vocês para funcionar**: a malha 4×3 que está no ar hoje
+> continua descendo igual, e nenhuma peça muda de célula. O §10.3 é o único
+> ponto que PEDE — e é opcional, no ritmo de vocês.
+
+### 10.1 O que mudou na tela
+
+Dividir a página em quadrantes IGUAIS dava à comutadora — nome curto, uma
+lâmina e uma palavra — o mesmo espaço da bateria, que tem desenho, tensão,
+carga e veredito. Sobrava de um lado e faltava do outro.
+
+Agora **cada coluna e cada fileira tem tamanho próprio**, e o critério é o que
+ela carrega, não o índice:
+
+* **trilho LARGO** — tem pelo menos um BANCO. Caixa de até 284×284 px.
+* **trilho FINO** — só chaves, ou vazio (aí é corredor de fio). Caixa **fixa**
+  de 96×82 px: a chave não engorda por sobrar espaço, e a bateria é que
+  aproveita a sobra.
+
+Quando não há peça bastante para encher a página, o quadro **centraliza** em vez
+de esticar caixa que já está grande o bastante.
+
+### 10.2 O que isso faz com a malha 4×3 de hoje
+
+Nada de contrato, e uma melhora de desenho. No barco da bancada (3 bancos, 1
+comutadora, `schematic` v2 4×3) a coluna 1 é só da chave e estreitou; as colunas
+0 e 2 são de banco e engordaram:
+
+```
+QUADRO em quadrantes (v2, malha 4x3 · 2 coluna(s) e 2 fileira(s) de banco,
+caixa 284x253 · chave 96x82)
+```
+
+A caixa da bateria passou de 273×192 para **284×253 px** — e com isso subiu de
+porte: o rodapé (corrente, temperatura, disponível) e a nota da origem do número
+voltaram para dentro do quadrante.
+
+### 10.3 O pedido: a malha PODE crescer para 7×5
+
+O firmware aceita agora até **7 colunas × 5 fileiras**, e é essa a malha que dá
+o quadro que o Jairo desenhou no #212:
+
+```
+[bateria] (chave) [bateria] (chave) [bateria] (chave) [bateria]
+( chave )    ·    ( chave )    ·    ( chave )    ·    ( chave )
+[bateria] (chave) [bateria] (chave) [bateria] (chave) [bateria]
+( chave )    ·    ( chave )    ·    ( chave )    ·    ( chave )
+[bateria] (chave) [bateria] (chave) [bateria] (chave) [bateria]
+```
+
+**4 colunas e 3 fileiras de bateria, 3 colunas e 2 fileiras de comutadora entre
+elas, e as BORDAS do quadro são baterias** — bancos nas células PARES, chaves
+nas ÍMPARES. Medido na tela: bateria **174×127 px**, chave **96×82 px**.
+
+Se vocês trocarem `MALHA_COLUNAS`/`MALHA_FILEIRAS` para 7×5 (e os gêmeos em
+`io-grade.ts`), a tela desenha isso sem mais nenhuma mudança dos dois lados. O
+arranjo automático do construtor só precisa passar a pular uma célula entre duas
+peças — o que ele já faz em espírito ao pôr "banco · chave · banco".
+
+**Nada obriga a 7×5.** Qualquer malha até 7×5 funciona, e a regra dos trilhos é
+a mesma em todas.
+
+### 10.4 O custo, e é ele que decide o prazo
+
+**7×5 NÃO cabe no envelope do §9.7.** A grade do §8 é 7×3: uma peça em
+`lin: 3` ou `lin: 4` some da tela que só conhece o §8, e o §8.4 é tudo-ou-nada
+— some o esquema INTEIRO daquele barco, não a peça.
+
+Então a ordem é essa, e não a inversa:
+
+1. **7 colunas, 3 fileiras** pode ir quando quiserem: cabe no envelope, dá 4
+   colunas de bateria e 2 fileiras, e não quebra tela nenhuma.
+2. **7×5** só depois que não houver mais tela de §8 em campo — ou com a decisão
+   explícita de que aqueles barcos ficam sem esquema até atualizarem.
+
+O teste que vocês já têm (`test_a_malha_cabe_no_envelope_do_paragrafo_8`) é
+exatamente quem vai reprovar o passo 2 na hora certa. Não o afrouxem sem essa
+decisão escrita.
+
+### 10.5 O que a tela recusa, e o que ela faz depois
+
+Sem mudança de política: quando a malha não fecha, o quadro cai **inteiro** e a
+página volta ao arranjo de antes, com o motivo no log e na faixa do topo. Três
+portas, nesta ordem:
+
+* malha acima de **7×5** — teto da tela;
+* caixa de bateria abaixo de **170×125 px** — ilegível a um braço de distância.
+  Acontece quando há colunas de banco demais: 6 bancos em 6 colunas de uma
+  malha de 7 não fecha (o arranjo "banco · chave · banco" nunca chega lá,
+  porque põe os bancos só nas colunas pares);
+* qualquer peça sem célula — o tudo-ou-nada do §8.4, sem alteração.
+
+### 10.6 Onde está, do nosso lado
+
+`main/screen_baterias.c`: `trilhos()` e a tabela `qd_cx`/`qd_bw`/`qd_cy`/`qd_bh`
+(a geometria), `QD_FINO_W`/`QD_FINO_H`/`QD_LARGO_W`/`QD_LARGO_H` e os
+`_Static_assert` que provam no compilador que 7×5 é o teto. O banco de prova de
+host `scripts/sim_palco.c` cobra a malha 7×5 inteira, a 4×3 de hoje, o quadro só
+de chaves e as três recusas.
