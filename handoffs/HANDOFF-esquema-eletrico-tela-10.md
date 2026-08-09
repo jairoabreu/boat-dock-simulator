@@ -623,6 +623,12 @@ voltaram para dentro do quadrante.
 
 ### 10.3 O pedido: a malha PODE crescer para 7×5
 
+> **SUPERADO pelo §11 (cartão #218, 09/08/2026).** O Jairo viu a 7×5 montada na
+> bancada e recusou o próprio pedido: o desenho abaixo, lido célula a célula,
+> vira um mar de 35 caixas quase iguais. **A malha em PIXEL continua valendo — é
+> a régua do §11.2 —, mas o ENDEREÇO que desce mudou:** 4×3 células de banco, e
+> a chave numa ARESTA entre duas delas. Leia o §11 antes de implementar daqui.
+
 O firmware aceita agora até **7 colunas × 5 fileiras**, e é essa a malha que dá
 o quadro que o Jairo desenhou no #212:
 
@@ -708,3 +714,207 @@ portas, nesta ordem:
 `_Static_assert` que provam no compilador que 7×5 é o teto. O banco de prova de
 host `scripts/sim_palco.c` cobra a malha 7×5 inteira, a 4×3 de hoje, o quadro só
 de chaves e as três recusas.
+
+---
+
+## 11. `schematic` v3: o painel de células, e a CHAVE NA ARESTA
+
+> **Cartão #218 (quadro 29), 09/08/2026.** Este parágrafo **PEDE trabalho de
+> vocês**, ao contrário do §10 — o vocabulário da posição mudou. A plataforma
+> já emite a v3 na dev; a tela precisa lê-la para a página não sair errada.
+
+### 11.1 O desenho, e por que ele mudou
+
+O §10.3 pediu a malha 7×5 e a plataforma a entregou no mesmo dia (#217). Com o
+quadro montado na bancada, o Jairo olhou e recusou o próprio pedido: o que a
+página mostra é um **mar de 35 células quase uniformes**, com a comutadora
+ocupando uma caixa de fileira inteira, quase do tamanho da bateria. O mockup que
+ele desenhou em seguida diz outra coisa:
+
+```
+  ┌────────┐ ▫ ┌────────┐ ▫ ┌────────┐ ▫ ┌────────┐
+  │bateria │   │bateria │   │bateria │   │bateria │
+  └────────┘   └────────┘   └────────┘   └────────┘
+       ▫            ▫            ▫            ▫
+  ┌────────┐ ▫ ┌────────┐ ▫ ┌────────┐ ▫ ┌────────┐
+  │bateria │   │bateria │   │bateria │   │bateria │
+  └────────┘   └────────┘   └────────┘   └────────┘
+       ▫            ▫            ▫            ▫
+  ┌────────┐ ▫ ┌────────┐ ▫ ┌────────┐ ▫ ┌────────┐
+  │bateria │   │bateria │   │bateria │   │bateria │
+  └────────┘   └────────┘   └────────┘   └────────┘
+```
+
+* **4 colunas × 3 fileiras de CÉLULAS DE BANCO** — doze lugares de bateria, o
+  dobro do `HC_MAX_BANKS`. A grade é FIXA: ela não cresce nem encolhe com o
+  barco.
+* **A chave não tem célula.** Ela mora numa **ARESTA** — o `▫` do desenho —, uma
+  **caixinha pequena centrada NO VÃO** entre duas células vizinhas. Existe
+  aresta entre todo par adjacente, na horizontal e na vertical: **17** no total
+  (3×3 horizontais, 4×2 verticais).
+
+O ganho não é só de tamanho. **A posição da chave passa a SER a ligação que ela
+faz**: a comutadora na aresta entre BB e BE é, por construção, a que comuta BB e
+BE. O desenho e os polos deixam de poder discordar.
+
+**A consequência está assumida, e é do Jairo:** comutadora só liga bancos
+**vizinhos** no painel. Quando os polos apontam para bancos que não são
+vizinhos, quem avisa é o construtor da web e quem rearruma os bancos é o
+operador. É como painel elétrico de verdade se desenha.
+
+### 11.2 A régua em px NÃO mudou — a v3 cabe no motor que vocês já têm
+
+Este é o ponto que faz o §11 barato do lado de vocês. **O painel de 4×3 células
+com os vãos entre elas é a malha de 7×5 TRILHOS do §10.3**: célula de banco nos
+índices PARES, vão de aresta nos ÍMPARES.
+
+| v3 | trilho (`qd_*` do §10) |
+|---|---|
+| célula do banco `(col, lin)` | `(2·col, 2·lin)` |
+| aresta `(col, lin, dir='h')` | `(2·col + 1, 2·lin)` |
+| aresta `(col, lin, dir='v')` | `(2·col, 2·lin + 1)` |
+
+Com 4 colunas de banco e 3 fileiras a conta dá exatamente 7×5 trilhos — o
+`QD_COLS_MAX`×`QD_LINS_MAX` que os `_Static_assert` de vocês já provam. E como
+**todo** trilho par carrega banco e **todo** ímpar é vão, a geometria deixa de
+depender do barco: `trilhos()` roda com `largo[] = {1,0,1,0,1,0,1}` e
+`{1,0,1,0,1}`, e o resultado é **constante**:
+
+* bateria **174×127 px** — o que o §10.3 mediu.
+
+A **caixinha da chave é a exceção, e é QUADRADA** (correção do Jairo de 09/08
+18:2x, registrada no #219 do quadro 26): ela **NÃO preenche o vão**. O trilho
+fino é retangular (132×104, caixa de 96×82) e a comutadora fica **centrada nele,
+quadrada, do MESMO tamanho na aresta horizontal e na vertical**:
+
+> **`QD_CHAVE = 60 px`** de lado. Cabe nos dois vãos com folga (96 na
+> horizontal, 82 na vertical) e é 0,34 da largura da bateria — o "~1/3 da célula
+> grande" do mockup. **Tela e construtor usam ESTE número**, que é o que o
+> pedido do #219 cobra; do nosso lado ele é `CAIXA_CHAVE` em `io-grade.ts`.
+
+A porta da "caixa ilegível" do §10.5 continua no código, mas nunca mais dispara
+pela arrumação: com o painel fixo, 174×127 é maior que o mínimo de 170×125 em
+todo barco. Quem pode derrubá-la é uma mudança de constante, não um operador.
+
+### 11.3 O que muda no `/hmi/config`
+
+**`schematic.version` = 3.** `cols`/`rows` passam a contar **células de banco**:
+
+```json
+"schematic": { "version": 3, "cols": 4, "rows": 3, "links": [ … ] }
+```
+
+As arestas **não vêm listadas** — saem da conta: `(cols-1)×rows` horizontais e
+`cols×(rows-1)` verticais.
+
+**`pos` ganha uma forma nova, só na chave.** O banco continua igual:
+
+```json
+"banks": [ { "id": "…", "pos": { "col": 0, "lin": 0 } } ]
+```
+
+A comutadora traz a célula **ÂNCORA** mais a direção do vão:
+
+```json
+{ "kind": "do", "channel": 5, "do_role": "battery_switch",
+  "switch_id": "…", "pos": { "col": 0, "lin": 0, "dir": "h" } }
+```
+
+* `dir: "h"` — o vão à **DIREITA** da célula âncora (liga `col` a `col+1`);
+* `dir: "v"` — o vão **ABAIXO** dela (liga `lin` a `lin+1`).
+
+A âncora é sempre a célula de cima/à esquerda: cada vão tem um endereço só. Não
+há `dir` fora da faixa — não existe `"h"` na última coluna nem `"v"` na última
+fileira, porque do outro lado não há vizinha.
+
+`links` não mudou nada (§9.4), e o `from_poles` continua separando verdade
+elétrica de topologia do desenho.
+
+**TUDO ou NADA, como sempre (§8.4):** o `schematic` só desce com TODA peça do
+barco posicionada — banco com célula, chave com aresta. Chave sem `dir` conta
+como **sem lugar**, e derruba o palco inteiro daquele barco.
+
+### 11.4 O VAZIO É INVISÍVEL — e isto é metade do pedido
+
+Correção do Jairo de 09/08 17:18, e vale a pena ler duas vezes: **ele desenhou
+as 12 células e as 17 arestas no mockup só para mostrar a ESTRUTURA.**
+
+As 12 células e as 17 arestas são **âncoras invisíveis de posição**. O que tem
+peça desenha no lugar fixo dela; **o vazio é ar** — nada de contorno tênue, nada
+de esqueleto, nada de grade de fundo. Na tela de bordo isso é absoluto.
+
+(No construtor da web há uma exceção, e só uma: durante a EDIÇÃO os lugares
+vazios aparecem discretos, senão não haveria onde soltar a peça. O botão
+"Pré-visualizar" apaga esse andaime e mostra o que vocês vão mostrar. O modo de
+visualização espelha a tela.)
+
+**O resultado esperado com o barco da bancada** (3 bancos, 1 comutadora): BB e
+BE em células vizinhas, a caixinha S6 na aresta entre elas, AI0 numa outra
+célula — e **NADA mais** na página. Sem 29 retângulos vazios.
+
+### 11.5 A v3 SUBSTITUI a v2 — não há emissão dupla
+
+Perguntado e respondido no cartão: a plataforma **não** emite v2 para telas
+velhas e v3 para novas. É uma tela só na dev, atualizada junto.
+
+Uma `pos` com `dir` numa tela do §8 ou do §9 não tem onde pousar: ou a caixinha
+cai em cima do banco da âncora, ou não cai em lugar nenhum. Isso não é novidade
+— é o mesmo problema que a malha 7×5 já tinha —, e **quem segura é o AMBIENTE,
+não o emissor**: as telas em campo falam com a PRODUÇÃO (`api.marinetcs.com`) e
+este palco só existe na DEV (`api-dev`).
+
+O §10.4 continua sendo a porta do rollout de produção, agora com a condição de
+saída somada: OTA das telas de campo para firmware `>= aec24c4` / `5c94c2e` **e**
+leitura da v3. Quem guarda a porta é o deploy.
+
+**Recusa recomendada do lado de vocês:** `version` que a tela não conhece →
+derruba o quadro INTEIRO e volta ao arranjo de antes, com o motivo no log e na
+faixa do topo. É a mesma política do §10.5, e é o que faz uma plataforma à
+frente do firmware ser um desenho velho em vez de um desenho errado.
+
+### 11.6 O que pedimos do lado de vocês (cartão irmão no quadro 26)
+
+1. **Ler `schematic.version == 3`** e tratar `cols`/`rows` como células de
+   banco, traduzindo para os trilhos pela tabela do §11.2. A `trilhos()` de
+   vocês não muda — muda quem a chama.
+2. **Ler `pos.dir`** na chave e desenhar a caixinha **no vão**, centrada, no
+   tamanho fixo e QUADRADO de **60×60 px** (§11.2) — não o vão inteiro.
+3. **Não desenhar lugar vazio** (§11.4). Nem célula, nem aresta, nem contorno.
+4. **Recusar `version` desconhecida** derrubando o quadro inteiro (§11.5).
+5. Opcional, e nosso palpite de que ajuda: quando a chave está no vão dos polos
+   dela, o fio banco→chave→banco fica CURTO e reto por construção. Vale
+   desenhá-lo com a espessura do barramento em vez do traço fino — é a leitura
+   que o eletricista faz de longe.
+
+**A pergunta do #219 sobre a aresta VAZIA, respondida.** "Aresta vazia entre
+bancos ligados por fio desenhado = fio direto atravessando a caixinha vazia, ou
+a caixinha some e vira traço?" — **a caixinha não existe**. Pelo §11.4, aresta
+sem peça é ar: o que passa ali é o `links` (§9.4), desenhado como traço direto
+entre as duas células. Do lado do construtor a única diferença é o GESTO: no
+modo "Ligar peças", um toque no vão vazio entre dois bancos desenha esse fio
+direto sem precisar tocar as duas caixas. O que ele grava é a mesma ligação do
+§9.4, com `from_poles: false` — nada de novo desce por causa disso.
+
+### 11.7 `config_version`
+
+Muda sozinho: `version`, `cols`, `rows` e cada `pos` entram no corpo que gera o
+hash. A tela rebaixa a config no ciclo normal, sem nada especial.
+
+### 11.8 Onde está, do nosso lado
+
+* `matel/services/esquema_eletrico.py` — `MALHA_COLUNAS`/`MALHA_FILEIRAS` (4×3),
+  `TRILHOS_COLUNAS`/`TRILHOS_FILEIRAS` (7×5, o espelho do §11.2),
+  `aresta_na_malha`, `celulas_da_aresta`, `aresta_entre`, `arestas_do_painel`,
+  `lugar_do_canal`, `posicao_do_canal` e `aresta_dos_polos`;
+* `SCHEMATIC_VERSION = 3` no mesmo módulo, emitido por
+  `matel/services/hmi_config.py` — que também LOGA a chave cujos polos não são
+  vizinhos, ou que está no vão errado;
+* migração `092_painel_de_arestas` — a coluna `esquema_dir` e a **conversão** do
+  que a malha 7×5 gravou, pela tabela do §11.2 (trilho par → célula, ímpar →
+  aresta); o que não converte volta para a bandeja;
+* `apps/nautica/src/lib/api/io-grade.ts` e
+  `components/iot/EsquemaEletricoBuilder.tsx` — o construtor, com os dois fluxos
+  do cartão: pousar a chave num vão **define** os polos, e escolher os polos
+  **acende** o vão em que ela cabe;
+* testes: `tests/test_grade_do_esquema.py` e `apps/nautica/tests/io-grade.test.ts`
+  — inclusive a régua dos 174×127 e a conversão da 092.
