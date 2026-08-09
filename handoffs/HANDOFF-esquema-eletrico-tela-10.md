@@ -197,3 +197,121 @@ o banco no lugar e as chaves desenhadas, o contrato fechou dos dois lados.
 
 > **09/08/2026 (#194):** agora pedimos uma coisa só — o §1.4. O resto deste
 > handoff segue valendo sem alteração.
+
+---
+
+## 8. A GRADE: a plataforma passou a dizer ONDE cada peça fica
+
+> **Acréscimo de 09/08/2026 — cartão #202.** Este trecho PEDE firmware. O resto
+> do handoff segue valendo sem alteração.
+
+### 8.1 O problema, na queixa de quem usa
+
+"A página de baterias nunca fica boa." Não é o desenho: é a ARRUMAÇÃO. Quem
+posiciona as caixas hoje é a tela — pela topologia fixa da `esquema_resolve()`,
+ou pelas correntes que a `esquema_por_config()` monta a partir dos polos do
+§1.4. As duas são bons palpites, e nenhuma tem como saber que o banco de
+partida daquele barco fica a bombordo, ou que o gerador daquele cliente mora
+embaixo do serviço. Só quem olhou o painel sabe.
+
+Então a plataforma ganhou um CONSTRUTOR: o operador arruma o esquema na web,
+numa grade com a proporção do card de vocês, e a arrumação desce na config.
+**Nenhuma imagem sobe** — sobe a CÉLULA de cada peça, e quem desenha continua
+sendo a tela, com as caixas, os fios e as cores que ela já tem.
+
+### 8.2 A grade é a de vocês, copiada
+
+Nada de novo a acordar: são `CEL_MAX`×`LIN_MAX` da `esquema_por_config()`,
+dentro do card de `PALCO_W`×`PALCO_H`.
+
+| | valor | de onde |
+|---|---|---|
+| colunas | 7 | `CEL_MAX` (`screen_baterias.c`) |
+| fileiras | 3 | `LIN_MAX` |
+| card | 893 × 221 px | `PALCO_W` / `PALCO_H` |
+
+O construtor da web desenha nessa grade e recusa na porta o que sair dela — uma
+coluna 7 devolve 422 antes de chegar ao banco de dados.
+
+### 8.3 O que muda no `/hmi/config`
+
+**Seção nova `schematic`, irmã de `banks`:**
+
+```json
+"schematic": { "cols": 7, "rows": 3 }
+```
+
+**`pos` em cada peça** — nos itens de `banks[]` e nos canais com
+`do_role: "battery_switch"`:
+
+```json
+"banks": [
+  { "id": "3f1c…-a92b", "name": "Partida BB", "bank_role": "start",
+    "pos": { "col": 0, "lin": 0 } }
+],
+"channels": [
+  { "kind": "do", "channel": 4, "do_role": "battery_switch",
+    "switch_role": "start_parallel",
+    "switch_bank_a": "3f1c…-a92b", "switch_bank_b": "77e0…-1c40",
+    "pos": { "col": 1, "lin": 0 } }
+]
+```
+
+`col` é 0..`cols`−1 e `lin` é 0..`rows`−1 — as mesmas células que a
+`esquema_por_config()` já preenche em `pt_col[]`/`pt_lin[]`.
+
+### 8.4 TUDO ou NADA — e é o ponto do contrato
+
+`schematic` **presente** = a grade deste barco está inteira, e toda peça tem
+`pos`. **Ausente (`null`)** = regime de conservação: nenhum `pos` desce e vocês
+arrumam o palco como sempre arrumaram, sem uma linha de diferença.
+
+Não existe meio termo, e é de propósito. Grade pela metade obrigaria vocês a
+misturar as posições que vieram com um arranjo automático para o resto — e duas
+peças escolhidas por critérios diferentes acabam na MESMA célula, ou o fio de
+uma cruza a caixa da outra. Basta uma peça na bandeja do construtor e a
+plataforma segura a grade inteira (com `WARNING` do nosso lado nomeando a que
+falta). **Barco já certificado não muda em nada:** sem ninguém abrir o
+construtor, `schematic` sai nulo para sempre.
+
+### 8.5 O que pedimos do lado de vocês (cartão irmão no quadro 26)
+
+1. Ler `schematic` e o `pos` de cada peça. Com `schematic` presente, a
+   `esquema_resolve()` **pula** as duas heurísticas e preenche
+   `pt_col`/`pt_lin` direto da config: a maquinaria de coordenadas do passo 3
+   da `esquema_por_config()` (passo horizontal pela fileira mais cheia, bloco
+   centrado no palco) continua valendo tal e qual — o que muda é a ORIGEM das
+   células.
+2. Os FIOS continuam saindo dos polos do §1.4, não da grade. A grade diz onde
+   as caixas ficam; quem liga quem já é o `switch_bank_a`/`switch_bank_b`. Uma
+   chave posicionada entre dois bancos que ela não comuta é escolha do
+   operador, e o fio deve seguir os polos, não a vizinhança.
+3. `cols`/`rows` vêm para vocês CONFERIREM, não obedecerem: se um dia a grade
+   de vocês crescer, uma config antiga com 7×3 deve pousar no canto em vez de
+   esticar. E se vier maior que a de vocês (não vem hoje), a peça fora do
+   alcance é o caso da faixa do topo — descartar em silêncio é o que esta
+   demanda veio evitar.
+4. Com `schematic` ausente, **nada muda**. Se o firmware de hoje for a campo
+   sem tocar nada disso, ele continua funcionando exatamente como funciona.
+
+### 8.6 `config_version`
+
+Como sempre: a versão é o hash do corpo, então os campos novos a fazem subir
+sozinha na primeira leitura de cada barco.
+
+### 8.7 Onde está, do nosso lado
+
+* Migração `089_grade_do_esquema` — `esquema_col`/`esquema_lin` em
+  `io_channels`, com CHECK de faixa e de par.
+* `matel/services/esquema_eletrico.py` — `GRADE_COLUNAS`/`GRADE_FILEIRAS`,
+  `grade_resolvida()` (o tudo-ou-nada) e `posicao_do_canal()`.
+* `matel/services/hmi_config.py` — a emissão de `schematic` e dos `pos`.
+* `matel/routers/iot.py` — 422 de célula fora da grade / em canal que não é
+  peça, e 409 de célula já ocupada, nomeando o borne que a ocupa.
+* UI: `apps/nautica/src/components/iot/EsquemaEletricoBuilder.tsx` (visão
+  "Esquema elétrico" da Automação IoT) e a regra pura em
+  `src/lib/api/io-grade.ts`.
+
+Verificado na dev em 09/08/2026: sem grade, `schematic: null` e todo `pos`
+nulo; com a grade cheia, `schematic: {cols:7, rows:3}` e cada peça na sua
+célula; tirando UMA peça, tudo volta a nulo.
