@@ -376,29 +376,58 @@ escolha da plataforma, e a que está no ar hoje é
 
 | | valor |
 |---|---|
-| colunas | 4 |
-| fileiras | 3 |
-| quadrante | 320 × 267 px |
+| colunas | 7 |
+| fileiras | 5 |
+| caixa de bateria | 174 × 127 px |
+| caixa de chave | 96 × 82 px (fixa) |
 
-**4×3, e a escolha está feita** — pelo Jairo, em 09/08/2026 (#209). A primeira
-proposta era 4×2, e a ressalva contra ela era a capacidade: o firmware aceita 6
-bancos e 6 chaves — 12 peças —, e 4×2 tem 8 quadrantes. Barco com mais de 8
-peças não fecharia o palco, e pelo tudo-ou-nada do §8.4 isso significaria **nada
-descer**. 4×3 dá 12 quadrantes, **exatamente o teto do firmware**: nenhum barco
-que vocês aceitam fica sem lugar, e a conta deixa de estar em aberto.
+> **Atualizado em 09/08/2026 — cartão #217 (plataforma).** Era 4×3 (#209).
+> Virou **7×5**, que é exatamente o desenho do §10.3, e a virada está no ar
+> **na DEV** (`api-dev`). O §10.4 continua valendo para a PRODUÇÃO — leiam-no
+> com a redação nova.
+
+**7×5, e a escolha está feita** — pelo Jairo, em 09/08/2026 (#217). O caminho
+até aqui:
+
+* 4×2 (#207) tinha 8 quadrantes, e o firmware aceita 6 bancos e 6 chaves — 12
+  peças. Barco com mais de 8 não fecharia o palco, e pelo tudo-ou-nada do §8.4
+  isso significaria **nada descer**;
+* 4×3 (#209) deu 12 quadrantes, exatamente o teto do firmware — mas era antes
+  de a malha saber estreitar a coluna da comutadora (§10.1);
+* 7×5 (#217) é a página do §10.3: **4 colunas e 3 fileiras de bateria, com os
+  corredores de chave entre elas, e as bordas do quadro em bateria.**
+
+**O que mudou no teto.** Até o #217 quem limitava a divisão era o ENVELOPE do
+§8 (`CEL_MAX`×`LIN_MAX`, 7×3): cada quadrante tinha de ser célula que a tela de
+campo sabe ler. 7×5 não cabe lá — e o §10.4 explica por que isso deixou de
+travar a escolha. O teto que sobra é o de vocês: `QD_COLS_MAX`×`QD_LINS_MAX`,
+e a malha de hoje **bate nele**.
 
 Note que a escolha não some do código: `MALHA_COLUNAS`/`MALHA_FILEIRAS` em
 `esquema_eletrico.py`, com gêmeos em `io-grade.ts`, continuam sendo os dois
-números que a definem. Trocá-la de novo é trocá-los — sem migração e sem mexer
-neste contrato, desde que a nova divisão respeite o §9.7 —, e o construtor
-continua dizendo na cara quantas peças passariam do que a malha comporta.
+números que a definem. Trocá-la de novo é trocá-los (e alargar o CHECK da
+migração, se a faixa crescer), e o construtor continua dizendo na cara quantas
+peças passariam do que a malha comporta.
 
-Um efeito da divisão vale dito: o arranjo automático do construtor põe 2 bancos
-e a chave entre eles por fileira, então com 4 colunas uma corrente de 3 bancos
-não cabe numa fileira só — ela transborda para a sobra. É a mesma conta de
-antes; o que mudou é que agora há fileira para onde transbordar.
+**O que o teste guarda agora.** O
+`test_a_malha_cabe_no_envelope_do_paragrafo_8` era quem reprovaria a 7×5, e o
+§10.4 pedia que ele não fosse afrouxado sem decisão escrita. A decisão está
+escrita, e o teste não foi afrouxado: foi **partido em dois**, um guardando
+cada metade da regra que ele antes misturava.
 
-O que a escolha tem de respeitar, dos dois lados, está no §9.7.
+* `test_a_malha_cabe_no_teto_da_tela` — a malha ≤ `QD_COLS_MAX`×`QD_LINS_MAX`.
+  É o teto que ainda é do desenho, e reprova a próxima divisão grande demais;
+* `test_o_envelope_do_paragrafo_8_guarda_a_producao_nao_a_malha` — afirma que a
+  malha **não** cabe no §8, e diz por que isso é seguro: o envelope mede o
+  ambiente de PRODUÇÃO, não a escolha. Gêmeos em `io-grade.test.ts`.
+
+Um efeito da divisão vale dito: o arranjo automático do construtor põe banco,
+chave, banco … na fileira, então uma corrente de até **4 bancos** cabe numa
+fileira só (na 4×3 cabiam 2, e a de 3 transbordava). E a semente agora respeita
+a alternância também na vertical — correntes nas fileiras **pares**, corredor
+nas ímpares.
+
+O que a escolha tem de respeitar, dos dois lados, está no §9.7 e no §10.5.
 
 ### 9.3 O que muda no `/hmi/config`
 
@@ -407,8 +436,8 @@ O que a escolha tem de respeitar, dos dois lados, está no §9.7.
 ```json
 "schematic": {
   "version": 2,
-  "cols": 4,
-  "rows": 3,
+  "cols": 7,
+  "rows": 5,
   "links": [
     { "a": "3f1c…-a92b", "b": "9d20…-77c1", "from_poles": true },
     { "a": "3f1c…-a92b", "b": "77e0…-1c40", "from_poles": false }
@@ -506,17 +535,22 @@ Enquanto a tela de hoje estiver em campo, ela vai continuar recebendo este
 os três — o parser descarta o que não conhece. O que ela vai ler é `cols`,
 `rows` e os `pos`, exatamente como no §8.
 
-**E isso funciona por uma escolha deliberada: a malha de quadrantes cabe dentro
-da grade 7×3 do §8.** Todo `pos` que desce hoje (coluna 0..3, fileira 0..2) é
-uma célula válida para a `esquema_por_config()`, que continua centrando o bloco
-no palco como sempre. A tela de hoje desenha o barco arrumado em quadrantes
-como se fosse a grade dela, com menos colunas ocupadas.
+**Isso funcionou por uma escolha deliberada, enquanto a malha coube dentro da
+grade 7×3 do §8** — foi assim na 4×2 e na 4×3: todo `pos` que descia (coluna
+0..3, fileira 0..2) era célula válida para a `esquema_por_config()`, que
+continua centrando o bloco no palco como sempre, e a tela de hoje desenhava o
+barco arrumado em quadrantes como se fosse a grade dela, com menos colunas
+ocupadas.
 
-**A regra, escrita para quem for mexer:** qualquer divisão de quadrantes futura
-tem de caber em `CEL_MAX`×`LIN_MAX` enquanto houver tela do §8 em campo. 4×2 e
-4×3 cabem. 4×4 **não** cabe, e escolhê-la exige aposentar o §8 primeiro. Do
-nosso lado isso está guardado por teste (`test_a_malha_cabe_no_envelope_do_`
-`paragrafo_8`), não por comentário.
+> **Não vale mais para a malha de hoje (#217).** A 7×5 tem `lin` 3 e 4, que o §8
+> não conhece: a compatibilidade descrita neste parágrafo acabou — de propósito,
+> e **só na DEV**. O §10.4 diz o que ela exige antes de ir à produção.
+
+**A regra, escrita para quem for mexer:** uma divisão de quadrantes só vai para
+o AMBIENTE em que há tela do §8 em campo se couber em `CEL_MAX`×`LIN_MAX`. Hoje
+a tela de campo fala com a PRODUÇÃO (`api.marinetcs.com`) e a malha 7×5 vive na
+`api-dev`, que nenhuma tela de campo alcança. Do nosso lado a regra está
+guardada por dois testes, não por comentário — ver o fim do §9.2.
 
 O que a tela de hoje NÃO recebe é o fio desenhado — ela não lê `links`. O
 construtor diz isso ao operador no traço de cada fio: firme = as duas telas
@@ -532,6 +566,9 @@ sozinha na primeira leitura de cada barco.
 
 * Migração `090_ligacoes_do_esquema` — tabela `io_schematic_links`, com o par
   em ordem canônica (CHECK `a < b`) e UNIQUE no par.
+* Migração `091_malha_7x5` (#217) — alarga o CHECK `ck_io_channels_esquema_`
+  `grade` de `lin` 0..2 para 0..4. A faixa só cresce, então nada gravado muda;
+  a volta zera a célula das peças que só existem na malha nova (bandeja).
 * `matel/services/esquema_eletrico.py` — `MALHA_COLUNAS`/`MALHA_FILEIRAS` e
   `TELA_W`/`TELA_H` (a malha), `ENVELOPE_COLUNAS`/`ENVELOPE_FILEIRAS` (a grade
   do §8, agora envelope), `celula_na_malha()`, `par_da_ligacao()`,
@@ -548,9 +585,9 @@ sozinha na primeira leitura de cada barco.
 ## 10. A malha deixou de ser HOMOGÊNEA: trilhos largos e finos
 
 > **Acréscimo de 09/08/2026 — cartão #212 (tela).** Isto **já está no firmware**
-> e **não pede nada de vocês para funcionar**: a malha 4×3 que está no ar hoje
-> continua descendo igual, e nenhuma peça muda de célula. O §10.3 é o único
-> ponto que PEDE — e é opcional, no ritmo de vocês.
+> e **não pede nada de vocês para funcionar**: a malha 4×3 de então continuava
+> descendo igual, e nenhuma peça mudava de célula. O §10.3 era o único ponto que
+> PEDIA — e a plataforma o atendeu no mesmo dia (#217): a malha da dev é 7×5.
 
 ### 10.1 O que mudou na tela
 
@@ -601,7 +638,13 @@ o quadro que o Jairo desenhou no #212:
 elas, e as BORDAS do quadro são baterias** — bancos nas células PARES, chaves
 nas ÍMPARES. Medido na tela: bateria **174×127 px**, chave **96×82 px**.
 
-Se vocês trocarem `MALHA_COLUNAS`/`MALHA_FILEIRAS` para 7×5 (e os gêmeos em
+> **Feito — cartão #217, 09/08/2026.** `MALHA_COLUNAS`/`MALHA_FILEIRAS` são
+> **7×5** na DEV, com os gêmeos de `io-grade.ts` e o CHECK da migração `091`
+> alargado para `lin` 0..4. O arranjo automático passou a semear exatamente
+> este desenho: bancos nas células PARES dos dois eixos, chaves nas ÍMPARES.
+> Ver §9.2. Para a produção, §10.4.
+
+Trocando `MALHA_COLUNAS`/`MALHA_FILEIRAS` para 7×5 (e os gêmeos em
 `io-grade.ts`), a tela desenha isso sem mais nenhuma mudança dos dois lados. O
 arranjo automático do construtor só precisa passar a pular uma célula entre duas
 peças — o que ele já faz em espírito ao pôr "banco · chave · banco".
@@ -609,22 +652,41 @@ peças — o que ele já faz em espírito ao pôr "banco · chave · banco".
 **Nada obriga a 7×5.** Qualquer malha até 7×5 funciona, e a regra dos trilhos é
 a mesma em todas.
 
-### 10.4 O custo, e é ele que decide o prazo
+### 10.4 O custo, e é ele que decide o prazo — do AMBIENTE, não da malha
+
+> **Redação nova — cartão #217, 09/08/2026 (Jairo).** O §10.4 continua de pé; o
+> que mudou é o que ele proíbe. A proibição é do **ambiente de PRODUÇÃO**, não
+> da escolha da malha: na DEV a virada já aconteceu.
 
 **7×5 NÃO cabe no envelope do §9.7.** A grade do §8 é 7×3: uma peça em
 `lin: 3` ou `lin: 4` some da tela que só conhece o §8, e o §8.4 é tudo-ou-nada
-— some o esquema INTEIRO daquele barco, não a peça.
+— some o esquema INTEIRO daquele barco, não a peça. Isso não mudou, e é por
+isso que o parágrafo existe.
+
+**O que destrava a virada é a topologia dos ambientes.** As telas em campo
+falam com a **produção** (`api.marinetcs.com`). O construtor, a migração e todo
+este trabalho vivem na **dev** (`api-dev`), que nenhuma tela de campo alcança —
+a regra da casa é deploy só na dev. Uma malha 7×5 na dev não apaga o esquema de
+barco nenhum: não há tela do §8 do outro lado dela.
 
 Então a ordem é essa, e não a inversa:
 
-1. **7 colunas, 3 fileiras** pode ir quando quiserem: cabe no envelope, dá 4
-   colunas de bateria e 2 fileiras, e não quebra tela nenhuma.
-2. **7×5** só depois que não houver mais tela de §8 em campo — ou com a decisão
-   explícita de que aqueles barcos ficam sem esquema até atualizarem.
+1. **7×5 na DEV** — feito (#217). É onde a página do §10.3 pode ser vista e
+   ajustada com o firmware novo, sem prazo emprestado da frota;
+2. **7 colunas, 3 fileiras em PRODUÇÃO** pode ir quando quiserem: cabe no
+   envelope, dá 4 colunas de bateria e 2 fileiras, e não quebra tela nenhuma;
+3. **7×5 em PRODUÇÃO** só quando não houver mais tela do §8 em campo. **A
+   condição de saída, escrita:** OTA das telas de campo para firmware
+   `>= aec24c4` / `5c94c2e` — o que traz o §9 (quadrantes e `links`) e o §10
+   (trilhos). Enquanto a frota não fechar esse OTA, promover a malha à produção
+   é o que está proibido; mexer nela na dev, não.
 
-O teste que vocês já têm (`test_a_malha_cabe_no_envelope_do_paragrafo_8`) é
-exatamente quem vai reprovar o passo 2 na hora certa. Não o afrouxem sem essa
-decisão escrita.
+O teste que reprovaria o passo 3 continua existindo, e **não foi afrouxado**:
+foi partido em dois — `test_a_malha_cabe_no_teto_da_tela` (guarda o
+`QD_COLS_MAX`×`QD_LINS_MAX` de vocês) e
+`test_o_envelope_do_paragrafo_8_guarda_a_producao_nao_a_malha` (afirma a
+incompatibilidade com o §8, em vez de deixá-la implícita). Quem guarda o passo 3
+não é mais um teste unitário: é o deploy, porque é ele que escolhe o ambiente.
 
 ### 10.5 O que a tela recusa, e o que ela faz depois
 
