@@ -299,7 +299,32 @@ construtor, `schematic` sai nulo para sempre.
 Como sempre: a versão é o hash do corpo, então os campos novos a fazem subir
 sozinha na primeira leitura de cada barco.
 
-### 8.7 Onde está, do nosso lado
+### 8.7 O fio com a grade: a invariante que o operador pode quebrar
+
+> **Acréscimo de 09/08/2026 — cartão #205.** Nada a mudar no firmware; é um
+> aviso sobre o que passa a chegar aí.
+
+Hoje quem monta o palco monta o FIO junto, e o `fios_da_chave()` garante que o
+`a` de cada trecho é a caixa da esquerda — a corrente nasce em fileira reta e
+crescendo para a direita. Com a grade do §8.3 a coordenada passa a ser do
+OPERADOR, e essa garantia deixa de valer sozinha: nada impede que ele ponha o
+banco à direita da chave que o comuta, ou os dois em colunas e fileiras
+diferentes.
+
+Do lado do `monta_fio()` isso já tem desfecho definido, e é por isso que não
+pedimos mudança: largura ou altura não positiva e o trecho simplesmente não
+é desenhado; fileiras diferentes e o retângulo nasce na coluna do `a`, sem
+tocar a caixa do `b`. **O que fizemos foi tirar essa surpresa da bancada:** o
+construtor da web desenha os vínculos o tempo todo, com traço FIRME só onde a
+regra acima produz fio, e pontilhado em âmbar (com a frase dizendo o motivo)
+onde ela não produz. O operador conserta a arrumação olhando o quadro, antes de
+a config descer.
+
+Se um dia o desenho de vocês ganhar cotovelo — fio em L entre caixas de colunas
+e fileiras diferentes —, é este parágrafo que muda dos dois lados: avisem, e o
+construtor passa a chamar de firme o que hoje ele chama de torto.
+
+### 8.8 Onde está, do nosso lado
 
 * Migração `089_grade_do_esquema` — `esquema_col`/`esquema_lin` em
   `io_channels`, com CHECK de faixa e de par.
@@ -310,8 +335,212 @@ sozinha na primeira leitura de cada barco.
   peça, e 409 de célula já ocupada, nomeando o borne que a ocupa.
 * UI: `apps/nautica/src/components/iot/EsquemaEletricoBuilder.tsx` (visão
   "Esquema elétrico" da Automação IoT) e a regra pura em
-  `src/lib/api/io-grade.ts`.
+  `src/lib/api/io-grade.ts` — incluindo `vinculosDaGrade()`, o espelho do
+  `fios_da_chave()` + `monta_fio()` que decide traço firme ou pontilhado (§8.7).
 
 Verificado na dev em 09/08/2026: sem grade, `schematic: null` e todo `pos`
 nulo; com a grade cheia, `schematic: {cols:7, rows:3}` e cada peça na sua
 célula; tirando UMA peça, tudo volta a nulo.
+
+---
+
+## 9. A TELA CHEIA em QUADRANTES, e as LIGAÇÕES definidas na plataforma
+
+> **Acréscimo de 09/08/2026 — cartão #207.** Este trecho PEDE firmware, e é o
+> §8 na sua forma seguinte. **O §8 continua valendo palavra por palavra
+> enquanto a tela de hoje estiver em campo** — ver §9.7, que é a razão de o
+> `pos` que desce agora continuar sendo célula válida para ela.
+
+### 9.1 O que muda no palco
+
+A página de Baterias vai ser REFEITA. O esquema elétrico deixa de ser um card
+de 893×221 px no meio da página e passa a ocupar a **tela inteira**
+(1280×800 de paisagem útil), dividida em **quadrantes**: cada quadrante desenha
+UM componente do esquema — um banco de baterias, uma chave comutadora.
+
+Com o palco maior, uma coisa que se aguentava no card deixa de se aguentar: o
+FIO ser dedução da tela. Até aqui vocês liam os polos do §1.4 e montavam a
+corrente, ou caíam na topologia fixa da `esquema_resolve()`. Num card de 221 px
+de altura o palpite errado custava pouco; numa tela inteira ele é a página. E
+quem sabe se aquele barramento passa por ali é quem olhou o painel — o mesmo
+que arrumou os quadrantes.
+
+Então a LIGAÇÃO passa a ser definida na plataforma, no construtor da web, e
+desce pronta.
+
+### 9.2 A malha de quadrantes — e a divisão é PROPOSTA, não número copiado
+
+Aqui há uma diferença importante em relação ao §8. Lá `cols`/`rows` eram
+`CEL_MAX`/`LIN_MAX`, **de vocês**, copiados. A divisão dos quadrantes não é: é
+escolha da plataforma, e a que está no ar hoje é
+
+| | valor |
+|---|---|
+| colunas | 4 |
+| fileiras | 3 |
+| quadrante | 320 × 267 px |
+
+**4×3, e a escolha está feita** — pelo Jairo, em 09/08/2026 (#209). A primeira
+proposta era 4×2, e a ressalva contra ela era a capacidade: o firmware aceita 6
+bancos e 6 chaves — 12 peças —, e 4×2 tem 8 quadrantes. Barco com mais de 8
+peças não fecharia o palco, e pelo tudo-ou-nada do §8.4 isso significaria **nada
+descer**. 4×3 dá 12 quadrantes, **exatamente o teto do firmware**: nenhum barco
+que vocês aceitam fica sem lugar, e a conta deixa de estar em aberto.
+
+Note que a escolha não some do código: `MALHA_COLUNAS`/`MALHA_FILEIRAS` em
+`esquema_eletrico.py`, com gêmeos em `io-grade.ts`, continuam sendo os dois
+números que a definem. Trocá-la de novo é trocá-los — sem migração e sem mexer
+neste contrato, desde que a nova divisão respeite o §9.7 —, e o construtor
+continua dizendo na cara quantas peças passariam do que a malha comporta.
+
+Um efeito da divisão vale dito: o arranjo automático do construtor põe 2 bancos
+e a chave entre eles por fileira, então com 4 colunas uma corrente de 3 bancos
+não cabe numa fileira só — ela transborda para a sobra. É a mesma conta de
+antes; o que mudou é que agora há fileira para onde transbordar.
+
+O que a escolha tem de respeitar, dos dois lados, está no §9.7.
+
+### 9.3 O que muda no `/hmi/config`
+
+**`schematic` ganha `version` e `links`:**
+
+```json
+"schematic": {
+  "version": 2,
+  "cols": 4,
+  "rows": 3,
+  "links": [
+    { "a": "3f1c…-a92b", "b": "9d20…-77c1", "from_poles": true },
+    { "a": "3f1c…-a92b", "b": "77e0…-1c40", "from_poles": false }
+  ]
+}
+```
+
+* `version` — 1 é o §8 (a grade dentro do card, sem ligações), 2 é isto.
+  **Desce sempre.** O firmware de hoje não olha o campo e não precisa: ver
+  §9.7.
+* `cols`/`rows` — agora são a malha de quadrantes. Mesma semântica de antes:
+  vêm para CONFERIR, não para obedecer.
+* `links` — os fios, e é a novidade. Lista, nunca nula quando `schematic`
+  existe; vazia significa "nenhum fio", não "não sei".
+
+**`switch_id` nos canais com `do_role: "battery_switch"`:**
+
+```json
+{ "kind": "do", "channel": 4, "do_role": "battery_switch",
+  "switch_role": "start_parallel",
+  "switch_id": "9d20…-77c1",
+  "switch_bank_a": "3f1c…-a92b", "switch_bank_b": "77e0…-1c40",
+  "pos": { "col": 1, "lin": 0 } }
+```
+
+A chave precisava de um NOME para ser apontada por um fio. O banco já tinha
+(`banks[].id`); a chave passa a ter o mesmo, com a mesma promessa: estável
+entre leituras, e do outro lado ele morre virando índice.
+
+### 9.4 As LIGAÇÕES: duas naturezas, uma lista
+
+`a` e `b` são ids de peça — um `banks[].id` ou um `switch_id`. **A ligação não
+tem direção:** `a`/`b` vêm em ordem canônica só para a lista não dançar entre
+leituras (o `config_version` é o hash do corpo). Não leiam a ordem como sentido
+de corrente.
+
+`from_poles` separa as duas naturezas:
+
+* **`true`** — o fio nasceu dos POLOS da comutadora (`switch_bank_a`/`_b`).
+  Isso é **verdade elétrica**: é o que a chave de fato comuta, e é o fio que
+  pode acender junto com o acionamento se vocês quiserem. Cada par de polos
+  resolvido vira dois links: `banco_a`—chave e chave—`banco_b`, que é
+  exatamente o que o `fios_da_chave()` montava.
+* **`false`** — foi DESENHADO no construtor, e é **topologia do desenho**: o
+  barramento que só existe naquele painel, o retorno que o eletricista quer
+  ver, o banco ligado ao banco. Não tem consequência elétrica nenhuma — some do
+  circuito e continua sendo um traço.
+
+**Os polos NÃO saíram.** Eles continuam em cada canal de chave, como no §1.4, e
+continuam sendo a autoridade sobre o que a chave comuta. O que o `links` faz é
+dizer o DESENHO por extenso, incluindo o que os polos já diziam — desenhar no
+construtor um fio que os polos já descrevem não cria link novo, funde-se ao que
+já está lá.
+
+### 9.5 TUDO ou NADA, também para o fio
+
+O `links` só desce **dentro de um `schematic` presente**, e `schematic` só está
+presente quando a malha fecha inteira (§8.4, sem alteração). Não é rigor por
+rigor: um fio entre duas caixas que a tela arrumou sozinha ligaria o que ela
+escolheu, não o que o operador desenhou — pior que fio nenhum.
+
+Sem `schematic`, portanto, nada muda para vocês: nem posição, nem fio, e a
+`esquema_resolve()` monta o palco como sempre montou.
+
+### 9.6 O que pedimos do lado de vocês (cartão irmão no quadro 26)
+
+1. **Desenhar o palco em quadrantes**, lendo `cols`/`rows` e o `pos` de cada
+   peça — a mesma leitura do §8.5 item 1, num palco de tela cheia.
+2. **Desenhar o BANCO como bateria automotiva**: bloco com os dois terminais
+   em cima, não uma caixa com texto. O construtor da web já desenha assim, e a
+   promessa dele é "ficou bom aqui = ficou bom lá" — se o quadro mostra bateria
+   e o vidro mostra retângulo, a promessa some.
+3. **Desenhar os `links` em vez de deduzir o fio.** Com `schematic.version >=
+   2`, a `esquema_resolve()` pula a montagem de correntes: os fios são os que
+   vieram. E aqui entra o pedido do §8.7 que ficou registrado para o dia em que
+   viesse: **o fio precisa de cotovelo**. Entre quadrantes de colunas e
+   fileiras diferentes, o `monta_fio()` de hoje pendura o retângulo no ar; num
+   palco de 8 quadrantes isso é o caso comum, não a exceção. Enquanto não
+   houver cotovelo, o construtor marca esses fios como "só na tela nova" e o
+   operador é avisado — mas o desenho fica devendo.
+4. **`from_poles` é opcional de consumir.** Se vocês desenharem os dois iguais,
+   está certo. Ele existe para o dia em que o fio da comutadora acompanhar o
+   acionamento — aí o fio desenhado não deve acender junto, porque não é ele
+   que a chave fecha.
+5. **`version` é para CONFERIR.** Config com `version: 1` (não existe hoje, mas
+   pode existir se rebaixarmos) não tem `links`: caiam na dedução de antes.
+   Config com `version` maior que o que vocês conhecem: leiam `cols`/`rows`,
+   `pos` e `links`, e ignorem o resto — nunca descartem o palco inteiro por não
+   reconhecer o número.
+
+### 9.7 A compatibilidade com o §8, e o que ela custa
+
+Enquanto a tela de hoje estiver em campo, ela vai continuar recebendo este
+`schematic`. Ela não conhece `version`, `links` nem `switch_id`, e vai ignorar
+os três — o parser descarta o que não conhece. O que ela vai ler é `cols`,
+`rows` e os `pos`, exatamente como no §8.
+
+**E isso funciona por uma escolha deliberada: a malha de quadrantes cabe dentro
+da grade 7×3 do §8.** Todo `pos` que desce hoje (coluna 0..3, fileira 0..2) é
+uma célula válida para a `esquema_por_config()`, que continua centrando o bloco
+no palco como sempre. A tela de hoje desenha o barco arrumado em quadrantes
+como se fosse a grade dela, com menos colunas ocupadas.
+
+**A regra, escrita para quem for mexer:** qualquer divisão de quadrantes futura
+tem de caber em `CEL_MAX`×`LIN_MAX` enquanto houver tela do §8 em campo. 4×2 e
+4×3 cabem. 4×4 **não** cabe, e escolhê-la exige aposentar o §8 primeiro. Do
+nosso lado isso está guardado por teste (`test_a_malha_cabe_no_envelope_do_`
+`paragrafo_8`), não por comentário.
+
+O que a tela de hoje NÃO recebe é o fio desenhado — ela não lê `links`. O
+construtor diz isso ao operador no traço de cada fio: firme = as duas telas
+desenham; tracejado = só a de quadrantes; pontilhado âmbar = não chega a vidro
+nenhum.
+
+### 9.8 `config_version`
+
+Como sempre: a versão é o hash do corpo, então os campos novos a fazem subir
+sozinha na primeira leitura de cada barco.
+
+### 9.9 Onde está, do nosso lado
+
+* Migração `090_ligacoes_do_esquema` — tabela `io_schematic_links`, com o par
+  em ordem canônica (CHECK `a < b`) e UNIQUE no par.
+* `matel/services/esquema_eletrico.py` — `MALHA_COLUNAS`/`MALHA_FILEIRAS` e
+  `TELA_W`/`TELA_H` (a malha), `ENVELOPE_COLUNAS`/`ENVELOPE_FILEIRAS` (a grade
+  do §8, agora envelope), `celula_na_malha()`, `par_da_ligacao()`,
+  `recusa_da_ligacao()`, `ligacoes_dos_polos()` e `ligacoes_no_fio()`.
+* `matel/services/hmi_config.py` — a emissão de `schematic.version`,
+  `schematic.links` e do `switch_id`.
+* `matel/routers/iot.py` — `GET`/`POST`/`DELETE`
+  `/devices/{id}/io/schematic/links`, com 422 de ponta que não é peça e 409 de
+  fio duplicado (nomeando os polos quando é o caso).
+* UI: `apps/nautica/src/components/iot/EsquemaEletricoBuilder.tsx` (o palco em
+  quadrantes, o modo "Ligar peças", o desenho de bateria automotiva) e a regra
+  pura em `src/lib/api/io-grade.ts`.
