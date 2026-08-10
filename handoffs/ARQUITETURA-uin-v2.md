@@ -204,6 +204,21 @@ observado), preenchida pelo inventário.
 - `node_id` sai do formulário — é reportado, não digitado.
 - Cadastrar um equipamento = **UIN + tipo + embarcação**. Nada mais.
 
+> ✅ **Cumprido em 08/08/2026 (#167).** `node_id` saiu do `DeviceCreate`/
+> `DeviceUpdate`, do formulário de cadastro de equipamento e do gerenciamento
+> de módulo da Automação IoT; a rota de reendereçamento manual
+> (`POST .../io/modules/{node}/readdress`) foi removida. Criar módulo exige
+> UIN. A coluna sobrevive como **último endereço observado**, escrita só por
+> quem observa o barramento — o `SyncNodeID` do INV e `POST /hmi/inventory`.
+>
+> Junto veio a régua que fechou a duplicação: **num casco onde algum módulo
+> tem UIN, leitura de I/O sem identidade não é módulo**. O CM06 subia a mesma
+> placa duas vezes — por MT2 com serial e pelo `IVS,INFO` legado de cada
+> endereço do address-claim dele —, e as legadas viravam card fantasma. O
+> corte é na ingestão (`ErrEnderecoSemIdentidade`, no gateway) e na
+> apresentação (`so_com_identidade`, nas três rotas que listam nó a nó). O
+> parque legado, onde ninguém tem UIN, segue inteiro pelo endereço.
+
 ### 7.3 Ingest
 
 O gateway resolve `UIN → device → vessel` e carimba a mensagem. Um UIN

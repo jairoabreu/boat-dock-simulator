@@ -952,3 +952,144 @@ hash. A tela rebaixa a config no ciclo normal, sem nada especial.
   **acende** o vão em que ela cabe;
 * testes: `tests/test_grade_do_esquema.py` e `apps/nautica/tests/io-grade.test.ts`
   — inclusive a régua dos 174×127 e a conversão da 092.
+
+## 12. A chave que NÃO liga banco a banco: a BORDA do painel
+
+> **Cartão #230 (quadro 29), 09/08/2026.** Este parágrafo **PEDE trabalho de
+> vocês**, como o §11: há um lugar novo a ler. A plataforma já emite na dev.
+
+### 12.1 O buraco, e como ele apareceu
+
+O §11 deu à comutadora um lugar exato — a **aresta**, o vão entre duas células
+vizinhas — e com isso a posição virou a ligação. Só que a aresta pressupõe
+**duas** baterias, uma de cada lado do vão, e **nem toda chave comuta duas**:
+
+| papel | quantos bancos toca | o outro lado é |
+|---|---|---|
+| `start_parallel` | 2 | outra bateria |
+| `emergency_crossover` | 2 | outra bateria |
+| **`house_master`** | **1** | o **barramento** de serviço |
+| **`shore_charger`** | **1** | o **cais** |
+
+Os dois de baixo não tinham onde morar. Em 09/08 às ~21h05 o Jairo criou a
+chave **"Cais"** (`do3`, `shore_charger`) e ela ficou na bandeja do construtor,
+sem lugar possível — e o **tudo-ou-nada do §11.3** fez o resto: com uma peça sem
+posição, **o `schematic` do barco inteiro parou de descer** (`pela metade: do3`
+no log da emissão). O aviso estava certo; o que faltava era o operador ter como
+resolvê-lo.
+
+### 12.2 A `pos` da chave de fronteira: célula de BORDA + face
+
+Chamamos de **chave de fronteira** a que serve UM banco. Ela mora numa **célula
+de borda do painel**, e a `pos` traz essa célula mais a **FACE** por onde o fio
+deixa o quadro:
+
+```json
+{ "kind": "do", "channel": 3, "do_role": "battery_switch",
+  "switch_role": "shore_charger", "switch_id": "…",
+  "pos": { "col": 0, "lin": 1, "dir": "e" } }
+```
+
+* `dir: "c"` — sai por **cima**; só na fileira 0;
+* `dir: "b"` — sai por **baixo**; só na última fileira;
+* `dir: "e"` — sai pela **esquerda**; só na coluna 0;
+* `dir: "d"` — sai pela **direita**; só na última coluna.
+
+São **14 bordas**: 4 em cima, 4 embaixo, 3 de cada lado. A célula de canto entra
+duas vezes, com faces diferentes — da quina se sai por qualquer uma das duas
+bordas que a tocam.
+
+**As quatro letras são NOVAS de propósito, e não reaproveitam `h`/`v`.** Um `h`
+na última coluna e um `d` na última coluna seriam o mesmo endereço com dois
+sentidos, e a leitura de `pos.dir` deixaria de ser única. Quem decide qual
+alfabeto vale é o **PAPEL**: comutadora lê `h`/`v`, chave de fronteira lê
+`c`/`b`/`e`/`d`, e **cada uma recusa a direção da outra** — a peça cai na
+bandeja e o operador rearruma, que é a mesma política do §11 com a malha antiga.
+
+### 12.3 Por que na CÉLULA, e não "na aresta externa" — a conta
+
+A proposta do cartão era pôr a caixinha na *aresta externa da célula do banco
+servido*. **Ela não cabe**, e a régua do §11.2 é que diz:
+
+1. **Fora do painel não há pixel.** Os 7×5 trilhos preenchem o QUADRO inteiro:
+   `4·210 + 3·132 = 1236` e `3·149 + 2·104 = 655`. Não sobra moldura.
+2. **Dentro da célula do banco só há a margem**, que é a folga da bateria: 18 px
+   na horizontal e 11 na vertical. Não comporta a caixinha de 88, e **nem um
+   fio maior que o período do tracejado** (18) — a mesma régua que deu o teto
+   dos 88 no #221.
+3. **Abrir uma faixa de borda no painel derruba a bateria.** Com uma faixa fina
+   a mais em cada eixo, o trilho largo cai de 210×149 para 144×79 e a caixa da
+   bateria para **108×57** — abaixo do mínimo legível de 170×125, e pelo §10.5 a
+   tela **recusa o quadro inteiro**.
+
+Na **célula de borda**, ao contrário, a conta fecha com folga. A caixinha de 88
+centrada no trilho largo deixa de fio para fora:
+
+| face | trilho | fio para fora | veredito |
+|---|---|---|---|
+| `e` / `d` | 210 | **61 px** | passa |
+| `c` / `b` | 149 | **30 / 31 px** | passa |
+
+Contra os 18 px do tracejado, folgado nos dois eixos. **A régua do §10/§11
+continua intacta** — nenhuma constante mudou, e a bateria segue em 174×127 em
+todo barco.
+
+**O preço, e ele é explícito: a chave de fronteira COME a célula.** Onde ela
+pousa não pousa banco. Cabe sem aperto — 12 células para no máximo 6 bancos mais
+2 chaves de fronteira (o vocabulário dá **uma vaga por papel**, §2).
+
+### 12.4 O CONTRATO dos polos: um só, e o outro é nulo
+
+`shore_charger` e `house_master` passam a ter **um polo**:
+
+* **`switch_bank_a`** — o **banco servido**. É dele que sai o fio até a
+  caixinha.
+* **`switch_bank_b`** — **vazio por definição do papel**. O outro lado é o cais
+  ou o barramento, e esse não é canal deste barco.
+
+No corpo do save os dois campos continuam andando **em par** (a API recusa um
+sozinho): trocar uma comutadora em `shore_charger` manda `switch_bank_b: null`
+junto, e é isso que impede o polo do papel anterior de ficar para trás
+desenhando um fio que a chave não faz mais.
+
+**A validação do §11 ganha o par dela.** Lá a chave tinha de estar no vão dos
+dois bancos que comuta; aqui a **célula da borda tem de ENCOSTAR na célula do
+banco servido**. Não encostando, o construtor avisa (`longe_do_banco`) e leva a
+caixinha com um clique para uma borda livre ao lado do banco — o fio
+atravessando o painel faria a posição parar de dizer quem a chave alimenta.
+
+### 12.5 O que muda no desenho de vocês
+
+1. **Ler `pos.dir` de quatro letras novas** (`c`/`b`/`e`/`d`) e desenhar a
+   caixinha **centrada na CÉLULA** daquela `pos` — trilhos `(2·col, 2·lin)`,
+   os mesmos do banco —, no tamanho fixo e quadrado de **88×88**, o mesmo do
+   §11.2. Não é o trilho inteiro: ela fica no meio dele.
+2. **Desenhar o FIO CURTO para fora**, da borda da caixinha até a borda do
+   QUADRO, na face que `dir` diz. Comprimentos da tabela do §12.3.
+3. **Não desenhar caixa nenhuma para o cais nem para o barramento** — eles ficam
+   implícitos fora do quadro. Nosso palpite de leitura, e é o que o construtor
+   faz: um risco atravessado na moldura, como um borne de barramento se lê num
+   unifilar de longe.
+4. **O fio do banco servido até a caixinha é um fio comum** — ele vem no
+   `links` como qualquer outro, com as duas pontas sendo o banco e a chave.
+   Nada de novo desce por causa dele.
+5. **`version` continua 3.** `cols`/`rows` não mudaram e as bordas **não vêm
+   listadas** — saem da conta, como as arestas: são as células com `col` 0 ou
+   `cols-1`, ou `lin` 0 ou `rows-1`. Uma tela do §11 que não conheça as letras
+   novas cai na recusa do §11.5 (derruba o quadro inteiro), e o AMBIENTE segura
+   o resto: isto só existe na `api-dev`.
+
+### 12.6 Onde está, do nosso lado
+
+* `apps/nautica/src/lib/api/io-esquema.ts` — `PAPEIS_DE_FRONTEIRA` e
+  `ehDeFronteira`, o complemento exato de `PAPEIS_DE_DOIS_POLOS`;
+* `apps/nautica/src/lib/api/io-grade.ts` — `Fronteira`, `BORDAS`,
+  `bordaNoPainel`, `FRONTEIRAS` (as 14), `celulaOcupada` (a disputa de trilho),
+  `espacoDaPeca`/`lugarAceita` (os três espaços) e **`fioDaBorda`**, que é a
+  conta do §12.3 em código;
+* `apps/nautica/src/components/iot/EsquemaEletricoBuilder.tsx` — o construtor:
+  a borda só acende com a chave de fronteira na mão, escolher o banco servido
+  ACENDE as bordas livres ao lado dele, e pousar a caixinha ao lado de um único
+  banco DEFINE o banco servido;
+* `apps/nautica/tests/io-grade.test.ts` — inclusive o teste que prova os 30 px
+  de fio e o que reconstitui o barco do Jairo fechando o painel com o "Cais".
