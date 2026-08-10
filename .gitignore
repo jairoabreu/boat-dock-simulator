@@ -16,3 +16,11 @@ matel-p4-docs/
 refs/
 .DS_Store
 __pycache__/
+
+# Ruído de sessão do piloto do QMS: cresce sem parar e não é código.
+tools/logs/
+.claude/
+
+# Projeto do slave do rádio C6 (referência de bancada, ~70 MB de build).
+# O binário que o produto usa vive em matel-ivs-display-p4/c6fw/.
+p4-c6-slave-2.12.12/
