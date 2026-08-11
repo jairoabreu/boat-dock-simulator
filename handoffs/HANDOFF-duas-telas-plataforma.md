@@ -255,11 +255,19 @@ Repo `matel-web-platform-api`:
 | Campos novos na resposta | `matel/schemas/hmi.py` — `HmiInventoryOut` |
 | Testes | `tests/test_inventario_hmi.py` — bloco "Duas telas no mesmo casco (#254)" |
 
-Validado em `api-dev.marinetcs.com` com dois cadastros de tela no casco da
-bancada (NX 50 Invictus — Demonstração): segundo inventário idêntico devolveu
+Validado em `api-dev.marinetcs.com` no casco da bancada (NX 50 Invictus —
+Demonstração), com cadastros de tela temporários criados e removidos ao fim —
+o cadastro e o token da tela real não foram tocados. O segundo inventário com
+a lista da bancada (`0x42`/2606200006 e `0x47`/2608070000) devolveu
 `matched: 2, created: 0, config_changed: false, config_version: 97`; o cadastro
-sem `model` se marcou sozinho; e a alternância de `self_mac` no mesmo cadastro
-apareceu no log como `token_em_duas_telas`.
+sem `model` se marcou sozinho no primeiro POST; `hmi_peers` foi de `0` para `1`
+quando o casco passou a ter duas telas cadastradas; e a alternância de
+`self_mac` no mesmo cadastro apareceu no log como `token_em_duas_telas`.
+
+A tela da bancada segue com o `model` vazio: ela pega `/hmi/config` de 5 em 5
+minutos, mas só inventaria de tempos em tempos (o último cadastro de módulo que
+ela mexeu é de 10/08). A marca cai no próximo inventário dela — ou o operador
+escolhe "Tela 10.1"" no cadastro e resolve na hora.
 
 Nada de migração: `hmi_peers` sai de `devices.model`, e `config_version` já
 existia em `vessels`.
