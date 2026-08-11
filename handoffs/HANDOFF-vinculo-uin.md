@@ -9,6 +9,15 @@ O **UIN** (serial de produção, formato AAMMDDSSSS, u64) é a ÚNICA identidade
 um módulo. O endereço de barramento (0x41-0x4F) é transporte: dinâmico,
 renegociável, NUNCA persistido como vínculo de função.
 
+### Convenção da sequência (iVS2008, 11/08/2026 — cartão CM2008 #261)
+Dentro do `AAMMDDSSSS`, a sequência `9000`–`9999` marca placa **nascida no
+P&D** (protótipo/bancada); `0000`–`8999` é produção de fábrica. Ex.:
+`2608119000`. É rastreabilidade de longo prazo — anos depois é a única coisa
+que diz que aquela placa nunca passou pela linha.
+**Nenhuma ponta muda:** o UIN segue opaco, sem campo `origem` e sem prefixo de
+tipo; quem quiser filtrar usa `uin % 10000 >= 9000`. Detalhe e o porquê em
+`ARQUITETURA-uin-v2.md` §3.1 e no README do `Firmware/V5-rs/`.
+
 ## O que já existe no fio
 - Inventário MTCP: o módulo anuncia (endereço, serial u64 LE) ao reivindicar.
   Após o fix do #125, a arbitragem re-verifica colisões — o inventário reflete

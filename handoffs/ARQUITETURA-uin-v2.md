@@ -39,12 +39,43 @@ Nenhuma topologia precisa ser cadastrada.
 |---|---|---|---|
 | DOT460 (rastreador 4G) | IMEI do modem | 15 dígitos | `862092066689393` |
 | CM06 (gateway CAN↔4G/WiFi) | MAC BLE | 12 hex | `3030F9281A7E` |
-| iVS2008 (relés) | eFuse BLK3 | 10 dígitos | `2606200005` |
+| iVS2008 (relés) | eFuse BLK3 (V4) / FRAM (V5) | 10 dígitos | `2606200005` |
 | Tela 10.1" | MAC BLE do C6 | 12 hex | `1020BAF3C8E6` |
 
 No fio o UIN trafega **como texto, sem prefixo de tipo** — o tipo é deduzido do
 cadastro. Manter o identificador natural evita uma tabela de tradução e um
 ponto de divergência a mais.
+
+### 3.1 A sequência do iVS2008 diz de onde a placa veio
+
+Regra definida em **11/08/2026** (cartão CM2008 #261). O UIN do iVS2008 é
+`AAMMDDSSSS` — ano, mês, dia e a sequência crescente do dia —, e a **sequência**
+separa as duas origens:
+
+| Sequência | O que é |
+|---|---|
+| `0000`–`8999` | placa de **produção**, nascida na linha de fábrica |
+| `9000`–`9999` | placa de **P&D** — protótipo, bancada, engenharia |
+
+Exemplo: `2608119000` é a segunda placa da bancada do P&D, provisionada em
+11/08. Anos depois, com a placa instalada num barco, o número da etiqueta é a
+única coisa que ainda diz que ela **nunca passou pela produção** — sem registro
+de teste de linha, sem lote, possivelmente montada à mão.
+
+**Nada nas três pontas muda por causa disso, e é de propósito:**
+
+- O UIN continua **opaco** no fio, no gateway e na plataforma. Ninguém
+  interpreta a sequência para rotear, resolver ou autorizar.
+- **Não há campo novo** — nem `origem` no cadastro, nem prefixo de tipo. A marca
+  já está dentro do número: quem precisar listar as placas de bancada filtra por
+  `uin % 10000 >= 9000`, que é regra escrita. Uma coluna derivada seria um
+  segundo lugar para a mesma verdade ficar desatualizada.
+- O firmware **não recusa** nenhuma das duas faixas; o build de provisionamento
+  só ecoa a origem para quem digitou conferir (`origem()` no `build.rs` do
+  `Firmware/V5-rs/`). Uma placa de P&D é um nó igual aos outros no barramento.
+
+Só o iVS2008 tem essa convenção: o UIN dos outros três é IMEI ou MAC, que não
+são nossos para convencionar.
 
 ## 4. ⚠️ A fronteira CAN — onde o UIN NÃO vai
 
