@@ -44,8 +44,10 @@ Endereços que importam: **CM03/CM250 PORT = 0x11** (bombordo) e **STARBOARD =
 **A ORIGEM desta tela é `0x70 + instância`** — a faixa `0x70`–`0x7F` foi atribuída
 ao MFD iVS-LCD7 pelo Jairo em 19/08/2026, no mesmo padrão das outras famílias
 (`CM01 = 2Xh`, `iVS-2008 = 4Xh`, `CM02 = 5Xh`). Tela única no barco = **`0x70`**.
-⚠️ Essa faixa **ainda não está na planilha do Gabriel** — enquanto não estiver, é
-acordo entre nós e não contrato do barramento; ver §8.1.
+A faixa **já está na planilha canônica**, anotada pelo Yuri — ou seja, é contrato
+do barramento e não acordo interno. ⚠️ A cópia extraída em `handoffs/mtcp/` é um
+retrato do zip de 19/08/2026 e **não tem** essa linha: quem for conferir
+endereço, confira na planilha viva, não no meu retrato.
 
 Payload — DLC 4, e só o byte 0 tem significado (os outros três são zero
 deliberado; o receptor não deve lê-los):
@@ -167,11 +169,9 @@ O `can_protocol.md` é honesto sobre eles (seção 10). Ficam aqui como lista de
 ## 8. O que precisa ser decidido antes de gravar no fio (perguntas ao Gabriel)
 
 1. ~~Qual endereço a tela usa?~~ **RESPONDIDO (Jairo, 19/08/2026): faixa `0x70`–
-   `0x7F`, tela única = `0x70`.** Resolve a colisão com o painel físico, que fica
-   em `0x30`. **Pendência que sobra e é do Jairo, não do firmware**: levar a faixa
-   para a planilha canônica do Gabriel. Endereço que só existe no nosso handoff é
-   endereço que o próximo dispositivo vai ocupar sem saber — foi exatamente assim
-   que `0x30` acabou compartilhado entre o StartStop e o IVS-4180.
+   `0x7F`, tela única = `0x70`** — e **já registrada na planilha canônica pelo
+   Yuri**, então é contrato do barramento, não acordo interno. Resolve a colisão
+   com o painel físico, que fica em `0x30`. Nada pendente aqui.
 2. ~~Device_Code é mesmo `0707h`?~~ **RESPONDIDO: sim, `0707h` (CM07D).**
 3. ~~Teto de tempo da demanda de partida?~~ **NÃO EXISTE MAIS** — com a regra do
    §4 (dedo no vidro), quem limita é o operador, e a máquina de partida é do
@@ -179,8 +179,7 @@ O `can_protocol.md` é honesto sobre eles (seção 10). Ficam aqui como lista de
 4. ~~O MFD respeita trava de rede?~~ **RESPONDIDO: sim, respeita** — mas na forma
    do §7.1: revalidável e dizendo por quê, nunca muda para sempre.
 
-**Nada mais bloqueia a implementação.** O que sobra é de fora do firmware: levar
-a faixa `0x70`–`0x7F` para a planilha canônica do Gabriel (§8.1).
+**Nada mais bloqueia a implementação, e nada ficou pendente fora dela.**
 
 ## 9. Hardware — o que conferir ANTES de escrever código
 
