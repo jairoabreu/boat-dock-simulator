@@ -186,10 +186,12 @@ O `can_protocol.md` é honesto sobre eles (seção 10). Ficam aqui como lista de
 - O P4 tem **3 controladores TWAI**; o `can_service.c` usa o 0 com a API **v2**
   (handle). O segundo barramento **tem de** usar outro controlador e outro handle,
   na mesma API, para os dois coexistirem.
-- ⚠️ **Divergência de pinos a resolver no banco**: o cabeçalho do
-  `can_service.h` diz N2K em **TX=45/RX=46**, e o registro de arquitetura da
-  família diz N2K em **46/47** com **45/46 reservados para o MTNet**. Medir a
-  fiação antes de assumir.
+- ✅ **Fiação MEDIDA NO BARCO (Jairo, 19/08/2026) e provada com partida real**:
+  **N2K = TX 2 / RX 3** e **MTNet = TX 46 / RX 47**. Os dois registros antigos
+  estavam errados (o cabeçalho dizia N2K 45/46; o código rodava N2K em 46/47 —
+  que é o barramento do MOTOR; a arquitetura reservava 45/46). Consequência
+  histórica: o decodificador de N2K passou meses escutando o barramento do
+  motor, e por isso nunca viu um PGN fora do simulador.
 - ⚠️ **GPIO1 é do oscilador RTC** no esquemático da 7" — não usar.
 - Transceiver do MTNet: SN65HVD230/232 (3,3 V, liga direto no P4). Terminação de
   120 Ω só nas **duas pontas** do barramento — muitos módulos trazem o resistor
