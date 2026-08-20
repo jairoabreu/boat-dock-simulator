@@ -95,19 +95,23 @@ Na prática, para o firmware:
 - Quem faz a máquina de partida continua sendo o CM03. A tela não conta tempo de
   motor de arranque nem decide quando desistir.
 
-⚠️ **CONSEQUÊNCIA QUE PRECISA DE DECISÃO PEQUENA — o estilo TOQUE.** Os Ajustes
-oferecem três estilos de acionamento (arrastar / segurar / tocar). Com a regra
-acima, *arrastar* e *segurar* funcionam sozinhos (o dedo termina o gesto em cima
-do controle e só precisa ficar lá), mas **um toque não tem duração**: não há
-como sustentar demanda nenhuma com ele. Proposta a confirmar no resultado: para
-LIGAR, o estilo *tocar* deixa de ser oferecido (ou cai para *segurar*), com o
-texto dizendo por quê. Oferecer um gesto que não consegue dar partida é pior que
-não oferecer.
+**OS TRÊS ESTILOS DE ACIONAMENTO CONTINUAM VALENDO** (Jairo, 19/08 — e não, o
+estilo *tocar* não sai: ele nunca foi um toque instantâneo). Os três são gestos
+**sustentados**; o que muda entre eles é só **quando a demanda nasce**:
 
-⚠️ **O gate de PIN interrompe o dedo.** Hoje o slider travado abre o teclado; ao
-fechar, o dedo não está mais no controle. Depois de liberar, o operador
-**refaz** o gesto — e a tela precisa deixar isso claro em vez de parecer que a
-partida falhou.
+| Estilo | A demanda começa… | …e termina |
+|---|---|---|
+| **Botão simples** | no `PRESSED`, na hora — sem etapa de confirmação, igual ao painel físico | ao soltar |
+| **Slider** | quando o arraste chega ao fim **e o dedo continua no controle** | ao soltar |
+| **Aperta e segura** | quando a barrinha enche | ao soltar |
+
+Nos três, `RELEASED`/`PRESS_LOST` devolve `0x33` no mesmo ciclo, prioridade
+`Low`. Nos estilos 2 e 3, se o gesto completar **com o dedo já fora**, não nasce
+demanda nenhuma — confirmar não é comandar; comandar é continuar segurando.
+
+⚠️ **O gate de PIN interrompe o dedo.** O slider travado abre o teclado; ao
+fechar, o dedo não está mais no controle. Depois de liberar, o operador **refaz**
+o gesto — e a tela precisa dizer isso, em vez de parecer que a partida falhou.
 
 ## 5. Arbitragem multi-mestre — obrigatória, não é enfeite
 
