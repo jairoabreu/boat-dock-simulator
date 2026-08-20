@@ -41,6 +41,12 @@ Prioridade é o byte mais alto, então **menor valor vence a arbitragem**:
 Endereços que importam: **CM03/CM250 PORT = 0x11** (bombordo) e **STARBOARD =
 0x12** (boreste). `CM06 = 0x31`. `BROADCAST = 0xFF` (não usar).
 
+**A ORIGEM desta tela é `0x70 + instância`** — a faixa `0x70`–`0x7F` foi atribuída
+ao MFD iVS-LCD7 pelo Jairo em 19/08/2026, no mesmo padrão das outras famílias
+(`CM01 = 2Xh`, `iVS-2008 = 4Xh`, `CM02 = 5Xh`). Tela única no barco = **`0x70`**.
+⚠️ Essa faixa **ainda não está na planilha do Gabriel** — enquanto não estiver, é
+acordo entre nós e não contrato do barramento; ver §8.1.
+
 Payload — DLC 4, e só o byte 0 tem significado (os outros três são zero
 deliberado; o receptor não deve lê-los):
 
@@ -141,10 +147,12 @@ O `can_protocol.md` é honesto sobre eles (seção 10). Ficam aqui como lista de
 
 ## 8. O que precisa ser decidido antes de gravar no fio (perguntas ao Gabriel)
 
-1. **Qual endereço a tela usa?** A aba *Identifiers* dá `Engine StartStop = 30h`,
-   `iVS-2008 = 4Xh`, `IVS-4180 = 30h+(8h+X)`, `CM02 = 5Xh` — e **nada** para o MFD
-   de 7". Ocupar `0x30` colide com o painel físico se os dois estiverem no mesmo
-   barco. Precisa de faixa própria (provavelmente na família CM07, ver §6).
+1. ~~Qual endereço a tela usa?~~ **RESPONDIDO (Jairo, 19/08/2026): faixa `0x70`–
+   `0x7F`, tela única = `0x70`.** Resolve a colisão com o painel físico, que fica
+   em `0x30`. **Pendência que sobra e é do Jairo, não do firmware**: levar a faixa
+   para a planilha canônica do Gabriel. Endereço que só existe no nosso handoff é
+   endereço que o próximo dispositivo vai ocupar sem saber — foi exatamente assim
+   que `0x30` acabou compartilhado entre o StartStop e o IVS-4180.
 2. **Device_Code é mesmo `0707h`?**
 3. **Teto de tempo da demanda de partida** (§4) — 5 s? 8 s? O CM03 tem limite
    próprio?
