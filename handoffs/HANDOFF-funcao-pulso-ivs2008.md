@@ -23,6 +23,14 @@ explícita, que fica gravada no módulo.
 Este handoff existe porque a ativação tem de chegar ao instalador pela
 plataforma, e hoje **não chega**: falta o elo do meio. Ver *O que falta* abaixo.
 
+> **Convenção de exibição (#265):** em QUALQUER interface — web, display,
+> alerta — o borne aparece na régua da serigrafia, contando do um: `E1..E12`
+> (entradas digitais), `S1..S8` (saídas), `A1..A8` (analógicas). O índice do
+> fio (0-based) é do protocolo e **nunca** aparece para gente. Neste documento,
+> `IN(N)`/`OUT(N)` numeram como o fio (vocabulário do contrato CAN); quando o
+> texto fala do que o instalador VÊ, fala em `E`/`S`. Exemplo: o fio diz
+> `CH=3` e a tela diz `E4`.
+
 ## O que a função faz, em uma tela
 
 - O par é **escolhido pelo instalador** desde o cartão #281: a entrada IN(N)

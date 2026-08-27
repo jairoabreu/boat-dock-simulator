@@ -127,6 +127,8 @@ código (`io-actions.ts`, no timeout) para não se perder.
 - `apps/nautica/src/lib/api/io-refusal.ts` — `recusaDeEvento` e as mensagens
   da recusa sem comando.
 - `apps/nautica/src/components/iot/IoChannelsConfig.tsx` — a tela do
-  instalador, com o par IN(N)→OUT(N) escrito e o estado do módulo.
+  instalador, com o par escrito na régua da serigrafia (#265: `E4 → S4`,
+  base 1 — nunca o índice do fio) e o estado do módulo. A frase-modelo da
+  API é a mesma régua: «Um toque na E4 inverte a S4, e não a S6».
 - Nome na interface: **"interruptor de campainha"**. Nunca "pulso" sozinho —
   o gateway já usa a palavra para o pulso de SAÍDA (`IVS,SET,…,1,<ms>`).
