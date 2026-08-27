@@ -104,7 +104,7 @@ o cadastro já perguntam a ela.
 
 O #281 pediu que a tela não tratasse o interruptor paralelo como conflito. Está
 feito nos dois lados: a matriz do porteiro ganhou `CAMPAINHA_RELE` consigo
-mesmo (`services/io_portas.py`) e o seletor mostra "também acionada pela DI5"
+mesmo (`services/io_portas.py`) e o seletor mostra "também acionada pela E6"
 em vez de desabilitar a opção.
 
 Fica registrado que isso EMENDA a Fase 0 do #268, fechada em 21/08 — a ata de
@@ -114,9 +114,14 @@ o par posicional o tornava inexprimível, não porque alguém o tenha recusado.
 ### 4. A entrada 9 em diante
 
 O #281 diz que a limitação "virou de formato, não de hardware". A plataforma
-continua recusando campainha de DI8 para cima, porque é o que o fio aceita hoje
-(`CH=<0..7>`). Quando o formato abrir, é uma constante — `CANAIS_COM_PAR` — e
-ela já mora num lugar só nos dois repos.
+continua recusando campainha da `E9` para cima, porque é o que o fio aceita
+hoje (`CH=<0..7>`). Quando o formato abrir, é uma constante —
+`CANAIS_COM_PAR` — e ela já mora num lugar só nos dois repos.
+
+> Os bornes deste documento estão na régua da serigrafia (#265): `E1..E12`,
+> `S1..S8`, `A1..A8`, contando do um. O `CH=<0..7>` acima é o índice do FIO, e
+> continua sendo o que trafega — `CH=7` é a `E8`. A convenção inteira está no
+> `HANDOFF-funcao-pulso-ivs2008.md`.
 
 ## Onde isto está, do lado da web
 
