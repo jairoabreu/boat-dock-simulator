@@ -97,8 +97,12 @@ puxado pela plataforma (URL de imagem no `/config`) fica para uma fase 2.
   migração 105 com `cm350_status`/`cm350_config`, rotas da estação e do
   operador), web `d785ce7` (MaTel-web_platform: cadastro dos dois modelos,
   seção Id/Token/URL + reconfiguração remota, card do mapa).
-- Firmware: 4.3" e 2.8" mandam `cfg` na telemetria (rede.c). A URL ainda
-  não tem campo na tela: entra pela reconfiguração remota, pela página do AP
-  ou por `POST /config` local — decisão sobre URL de fábrica pendente.
+- Firmware: 4.3" e 2.8" mandam `cfg` na telemetria (rede.c). **URL de
+  fábrica** = base dev acima (dono, 06/09: "pode gravar essa por enquanto");
+  NVS vazia → fábrica. Com a telemetria DESLIGADA a estação ainda consulta
+  `GET /config` a cada 60 s — dá para reconfigurar desde o 1º boot. A tela
+  Wi-Fi mostra servidor atual, hora do último envio (NTP, fuso de Brasília),
+  OK/FALHA e contagem. **Estação real 4.3" (80F1B2D37A6E) enviando ao dev
+  desde 06/09 12:33 UTC** (período 1 s escolhido na tela).
 - Medição do impacto da telemetria no ciclo MTNet: instrumentada
   (`jitter_*`), roteiro em CM350+/tools/medicao, pendente de rede comum.
