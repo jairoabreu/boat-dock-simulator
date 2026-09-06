@@ -124,6 +124,23 @@ nem listener TCP no gateway.
   (4,3" SDMMC; 2,8" SPI); a montagem é tentada a cada 60 s (cartão pode
   entrar depois, nunca é formatado).
 
+## Cores e prioridades na estação (06/09, aprovado pelo dono)
+
+| Tarefa | Prio | Core |
+|---|---|---|
+| MTNet recepção (`twai_receive`) | 24 | 1 |
+| MTNet ciclo (10 ms, Navigate) | 23 | 1 |
+| ESP-Hosted / Wi-Fi | 22 | livre (nunca acima da MTNet) |
+| esp_timer | 22 | 0 |
+| lwIP | 18 | 0 |
+| LVGL | 4 | 1 |
+| rede_boot / som | 3 | 0 |
+| rede_plat (telemetria/config), fila_sd, wifi_scan | 2 | 0 |
+
+ISR do CAN em IRAM (gravação na flash não perde quadro). Critério de
+aceitação no barco: `jitter_max_ms` < 5 e `nav_max_ms` dentro de uma
+cadência da ECU com telemetria a 1 s e eventos ligados enquanto comanda.
+
 ## 3. Atualização de firmware
 
 Continua pelo protocolo da CM01 (SoftAP oculto + `POST /update`); um OTA
