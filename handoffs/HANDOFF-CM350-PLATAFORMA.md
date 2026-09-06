@@ -1,16 +1,36 @@
 # HANDOFF — CM350/CM350+ ↔ MaTel Web Platform (telemetria e reconfiguração)
 
-Contrato definido no contexto do CM350 em 06/09/2026 (#335). A plataforma
-implementa o **lado servidor** num serviço próprio, **porta 8350** (proposta),
-HTTP simples no início; HTTPS quando houver certificado. A estação é sempre
-quem inicia (funciona atrás de NAT/4G).
+Contrato definido no contexto do CM350 em 06/09/2026 (#335) e IMPLEMENTADO
+na plataforma no mesmo dia (cartões #342–#345 do quadro 29): serviço no
+mesmo processo da API (`matel/routers/cm350.py`), **porta 8350 em HTTP
+puro**, publicada direto do container — a estação não fala TLS e o Traefik
+da porta 80 redireciona para HTTPS. A estação é sempre quem inicia (funciona
+atrás de NAT/4G).
+
+**Base em dev:** `http://api-dev.marinetcs.com:8350/api/v1/cm350` (é o que a
+estação precisa ter em `url`; a plataforma mostra o valor em
+GET /devices/{id}/cm350 e na seção da estação do formulário de dispositivo).
+
+**Cadastro na plataforma:** Dispositivos → Novo → tipo "Estação CM350 (tela
+2,8")" (`model=cm350`) ou "Estação CM350+ (tela 4,3")" (`model=cm350p`), MAC
+com 12 hex (o mesmo formato do CM06/tela: `80F1B2D37A6E`), protocolo `cm350`
+automático, vínculo com a embarcação. Não há token a emitir: ele é derivado.
 
 ## Identidade e autenticação
 
 - `X-CM350-Id: aa-bb-cc-dd-ee-ff` — MAC de fábrica do chip (minúsculas, hífen).
-- `X-CM350-Key: <16 hex>` — token por dispositivo, derivado do MAC, mostrado
-  na tela **Configurações → Wi-Fi e plataforma** ("Id … Token …"). A plataforma
-  cadastra o par (id, token) na embarcação; requisição com token errado → 401.
+- `X-CM350-Key: <16 hex>` — token por dispositivo, DERIVADO do MAC de fábrica
+  com a mesma conta nos dois lados (`rede_token()` em rede.c e
+  `token_do_mac()` em matel/services/cm350.py), em aritmética de 32 bits:
+
+      a = (m0<<24 | m1<<16 | m2<<8 | m3) * 2654435761
+      b = ((m2<<24 | m3<<16 | m4<<8 | m5) * 2246822519) ^ 0x0C350
+      token = "%08x%08x" % (a, b)      # ex.: 80:f1:b2:d3:7a:6e → 09f75ee387e27672
+
+  A estação mostra o valor em **Configurações → Wi-Fi e plataforma** ("Id …
+  Token …"); a plataforma recalcula e compara em tempo constante. Qualquer
+  falha (MAC não cadastrado, modelo não-CM350, device inativo, token
+  diferente) → **401 uniforme**, sem revelar o inventário.
 
 ## 1. Telemetria — `POST <base>/telemetria`
 
@@ -30,8 +50,17 @@ Corpo JSON (é o mesmo `GET /estado` local da estação), a cada
 - `evento`: código da EventTable da CM01 (0x1010 ECU sem resposta, 0x1020
   colisão de ID, 0x1030 distúrbio, 0x15xx atuadores) ou 0x0000.
 - `marcha`: F/N/R; `thr` 0–100 %; `falha`: byte Fail do ECUStatus (planilha MTCP).
+- **`cfg`** (firmware ≥ 06/09): a config que a estação REPORTA —
+  `{"rpm_max":2500,"rpm_engate":700,"instancia":2,"brilho":100,"idioma":0,
+  "som":1,"som_toque":0,"som_neutro":0,"telemetria_s":1,"url":"…",
+  "wifi_ssid":"…"}` (nunca a senha). É como a plataforma confirma a
+  reconfiguração: `GET /config` devolve só o que difere disto.
 - Futuro: campos N2K (leme, tanques) entram no mesmo objeto sem quebrar o resto.
-- Resposta esperada: `204` ou `200` (corpo ignorado).
+- Resposta esperada: `204` (corpo ignorado). A plataforma grava a linha viva
+  em `cm350_status`, uma amostra por motor ONLINE em `engine_telemetry`
+  (`dialect='mtnet'`, instance 0 = BB / 1 = BE: rpm, marcha→trans_gear,
+  manete→throttle_pct, falha em raw), carimba `devices.last_seen_at` e
+  publica `kind: cm350_status` no canal da empresa (WS).
 
 ## 2. Reconfiguração — `GET <base>/config?id=<id>`
 
@@ -47,8 +76,12 @@ com JSON contendo **só os campos a alterar** (qualquer subconjunto):
 - Faixas: rpm_max 500–10000; rpm_engate 0–3000 (0 = sem limite); instancia
   1–4 (→ endereço 0x21–0x24, aplicado ao vivo); brilho 5–100; idioma 0 PT /
   1 EN; som* 0/1; telemetria_s 0–3600.
-- `204` (ou `{}`) = nada a mudar. A estação aplica, salva em NVS e confirma
-  **na telemetria seguinte** (os valores passam a refletir a config nova).
+- `{}` = nada a mudar. A plataforma devolve **só os campos da config DESEJADA
+  (PUT /devices/{id}/cm350/config, pelo operador) que diferem da `cfg`
+  reportada**; a estação aplica, salva em NVS e confirma na telemetria
+  seguinte, quando `cm350_config.applied_at` é carimbado. `wifi_senha` só
+  acompanha quando o `wifi_ssid` desejado difere do reportado. Sem `cfg`
+  (firmware antigo) a desejada vai inteira, idempotente.
 - **Segurança:** a estação **recusa** reconfiguração enquanto está **no
   comando** (posto 3) — a plataforma deve reenviar depois; nenhuma alteração
   é aplicada em silêncio durante a navegação.
@@ -58,10 +91,14 @@ com JSON contendo **só os campos a alterar** (qualquer subconjunto):
 Continua pelo protocolo da CM01 (SoftAP oculto + `POST /update`); um OTA
 puxado pela plataforma (URL de imagem no `/config`) fica para uma fase 2.
 
-## Estado no CM350
+## Estado (06/09/2026)
 
-Firmware 4.3" `9959100` (CM350+/firmware): `rede.c` (STA com até 4 redes,
-cliente outbound, `/config`/`/estado` locais), tela Wi-Fi com busca e teclado.
-2.8" recebe o mesmo na próxima gravação. Medição de impacto da telemetria no
-ciclo MTNet (jitter) instrumentada e pendente de execução com a plataforma
-(ou coletor local) no ar.
+- Plataforma: API `722eaad` (matel-web-platform-api: protocolo `cm350`,
+  migração 105 com `cm350_status`/`cm350_config`, rotas da estação e do
+  operador), web `d785ce7` (MaTel-web_platform: cadastro dos dois modelos,
+  seção Id/Token/URL + reconfiguração remota, card do mapa).
+- Firmware: 4.3" e 2.8" mandam `cfg` na telemetria (rede.c). A URL ainda
+  não tem campo na tela: entra pela reconfiguração remota, pela página do AP
+  ou por `POST /config` local — decisão sobre URL de fábrica pendente.
+- Medição do impacto da telemetria no ciclo MTNet: instrumentada
+  (`jitter_*`), roteiro em CM350+/tools/medicao, pendente de rede comum.
