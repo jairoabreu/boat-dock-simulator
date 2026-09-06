@@ -86,6 +86,20 @@ com JSON contendo **só os campos a alterar** (qualquer subconjunto):
   comando** (posto 3) — a plataforma deve reenviar depois; nenhuma alteração
   é aplicada em silêncio durante a navegação.
 
+## Transporte: HTTP com keep-alive hoje, WebSocket quando houver push
+
+Decisão do dono (06/09, "vamos com as tuas recomendações"): **não** trocar
+por TCP cru. A estação mantém UMA conexão HTTP persistente (keep-alive) e
+reaproveita entre o POST da telemetria, o GET da config e os ciclos
+seguintes; o uvicorn guarda a conexão ociosa por 75 s (`--timeout-keep-alive
+75`). Medido no dev: ciclos de 30 s na mesma porta de origem. Conexão caiu
+→ a estação tenta uma 2ª vez com conexão nova; o polling se recupera sozinho
+(Wi-Fi de marina oscila; no mar não há Wi-Fi). **Quando houver push de
+verdade** (comando da plataforma, alarme, "estação online" em segundos), o
+caminho é **WebSocket no mesmo processo da API** (`/cm350/ws`, mesma
+autenticação por MAC/token no handshake, mesmas mensagens JSON) — não MQTT
+nem listener TCP no gateway.
+
 ## 3. Atualização de firmware
 
 Continua pelo protocolo da CM01 (SoftAP oculto + `POST /update`); um OTA
