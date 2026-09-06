@@ -76,12 +76,15 @@ com JSON contendo **só os campos a alterar** (qualquer subconjunto):
 - Faixas: rpm_max 500–10000; rpm_engate 0–3000 (0 = sem limite); instancia
   1–4 (→ endereço 0x21–0x24, aplicado ao vivo); brilho 5–100; idioma 0 PT /
   1 EN; som* 0/1; telemetria_s 0–3600.
-- `{}` = nada a mudar. A plataforma devolve **só os campos da config DESEJADA
-  (PUT /devices/{id}/cm350/config, pelo operador) que diferem da `cfg`
-  reportada**; a estação aplica, salva em NVS e confirma na telemetria
-  seguinte, quando `cm350_config.applied_at` é carimbado. `wifi_senha` só
-  acompanha quando o `wifi_ssid` desejado difere do reportado. Sem `cfg`
-  (firmware antigo) a desejada vai inteira, idempotente.
+- `{}` = nada a mudar. **Modelo BIDIRECIONAL** (dono, 06/09): a plataforma
+  guarda só as **pendências** feitas na web (`cm350_config.desejada`); tudo o
+  mais espelha a `cfg` que a estação reporta. Na telemetria, pendência que a
+  estação já reporta igual é confirmada (sai; `applied_at` quando zera);
+  telemetria com `"gatilho":"config"` (o operador mexeu NA TELA — o firmware
+  manda uma na hora a cada gravação local) faz a edição local vencer a
+  pendência não aplicada. A UI mostra reportado ∪ pendente. `wifi_senha` só
+  viaja junto com um `wifi_ssid` pendente. Sem `cfg` (firmware antigo) a
+  pendência vai inteira, idempotente.
 - **Segurança:** a estação **recusa** reconfiguração enquanto está **no
   comando** (posto 3) — a plataforma deve reenviar depois; nenhuma alteração
   é aplicada em silêncio durante a navegação.
