@@ -100,6 +100,27 @@ caminho é **WebSocket no mesmo processo da API** (`/cm350/ws`, mesma
 autenticação por MAC/token no handshake, mesmas mensagens JSON) — não MQTT
 nem listener TCP no gateway.
 
+## Envio por evento, intervalos longos e fila no cartão (06/09, #346–#350)
+
+- **Períodos:** Desligada / 1 / 5 / 10 / 30 s / 1 / 5 / 10 / 15 / 30 min
+  (`telemetria_s` 0…1800). A consulta de config vai a cada
+  min(período, 60 s) — com 30 min a estação continua reconfigurável em 1 min.
+- **Evento → envio imediato** (`"gatilho":"evento"`): marcha BB/BE (F/N/R),
+  ECU entrando/saindo, posto, quem comanda, código de evento, tráfego perdido
+  ou recuperado; 300 ms de acomodação para juntar BB e BE. Manete só no
+  periódico (`"gatilho":"periodo"`). Desligada = nem periódico nem evento.
+- **Sem conexão → cartão SD** (`fila.c`): cada telemetria vira uma linha em
+  `/sd/cm350/fila/NNNNNNNN.jsonl` (`t=<epoch|0>;b=<boot>;u=<uptime ms>;<json>`)
+  e no registro diário `/sd/cm350/log/AAAA-MM-DD.jsonl` (caixa-preta; os mais
+  antigos são apagados abaixo de 500 MB livres). Com conexão, até 20 linhas
+  por ciclo sobem antes da telemetria ao vivo, com `"atrasada":true,"t":T,
+  "boot":B,"up":U` — T reconstruído (mesmo boot: agora − idade) quando a
+  estação não tinha hora. A plataforma classifica `gatilho="fila"`, usa `t`
+  (se > 2023) como hora da amostra na série de motor, e a linha viva só é
+  sobrescrita por amostra mais nova. **Pinos do slot pendentes em board.h**
+  (4,3" SDMMC; 2,8" SPI); a montagem é tentada a cada 60 s (cartão pode
+  entrar depois, nunca é formatado).
+
 ## 3. Atualização de firmware
 
 Continua pelo protocolo da CM01 (SoftAP oculto + `POST /update`); um OTA
