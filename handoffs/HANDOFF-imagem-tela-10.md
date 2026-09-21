@@ -127,6 +127,9 @@ escolhe onde pousar.
 | `HMI_ASSET_AUTOCROP` | 1 | recorte no conteúdo |
 | `HMI_ASSET_BG_TOL` | 18 | tolerância do flood-fill |
 | `HMI_ASSET_PAD_PCT` | 2 | margem após o recorte |
+| `HMI_ASSET_BG_ILHAS` | 1 | 21/09/2026: remove fundo CERCADO pelo contorno (janelas, praça de popa) — ilhas na cor exata do fundo que o flood-fill não alcança |
+| `HMI_ASSET_BG_ILHA_TOL` | 3 | tolerância de cor da ilha (apertada: fundo de render é uniforme; casco branco vem sombreado) |
+| `HMI_ASSET_BG_ILHA_MIN_PX` | 30 | ilha menor que isto é realce do desenho e fica |
 | `HMI_ASSET_QUALITY` | 85 | qualidade do JPEG |
 
 ⚠️ A chave do cache inclui **todos** esses parâmetros. Mudar qualquer um
