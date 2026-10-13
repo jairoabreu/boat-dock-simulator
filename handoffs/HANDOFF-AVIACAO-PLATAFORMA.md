@@ -13,7 +13,7 @@ plataforma; o lado do iPad, em `matel-aviation-app`.
 2. **Rastreamento ao vivo** durante o voo (4G do iPad), além do envio do voo gravado.
 3. Clientes: **todo mundo** — proprietários, escolas, operadores, oficinas → multiempresa, vários pilotos por aeronave, um piloto em várias aeronaves/empresas.
 4. Domínio: **flight.marinetcs.com** (web) e **flight.marinetcs.com/api/v1** (API, mesma origem → sem CORS).
-5. Infra: os droplets DigitalOcean do app **PDA** (sem uso). `pda.marinetcs.com` → 24.144.107.128 ainda responde (uvicorn atrás de Caddy) e a porta 22 está fechada para o Mac. **Nada no PDA é apagado antes do dono dizer o que guardar.**
+5. Infra: o droplet do PDA foi apagado pelo dono (13/10) e no lugar dele nasceu o **flight-1 = 165.227.78.93** (DigitalOcean NYC3, Premium AMD 2 vCPU / 4 GB / 80 GB NVMe, Ubuntu 24.04). Preparado em 13/10: Docker + compose, usuário `deploy` (sudo, grupo docker), SSH só por chave, ufw 22/80/443 (+ firewall da DO), fail2ban, swap 2 GB, atualizações de segurança automáticas, pasta da pilha `/srv/flight`.
 
 ## Infra (instância "flight")
 
@@ -75,13 +75,13 @@ Telas: login/empresas/usuários/papéis (cópia), **frota** (aeronaves + estado 
 Termo de consentimento no pareamento/primeiro login (versão + data em `pilot_profiles`); código ANAC e dados pessoais visíveis só a quem tem `pilots:read` na empresa e ao próprio piloto; exportação e exclusão a pedido (diário confirmado é registro legal da aeronave → anonimiza o tripulante em vez de apagar a entrada).
 
 ## Fases
-- **0** este contrato ✔ (falta: acesso ao PDA e o que guardar dele).
+- **0** este contrato ✔ + servidor flight-1 preparado ✔.
 - **1** API (repo da plataforma, deploy só na instância flight de DEV primeiro): modelo + pareamento + `/live` + `PUT flights` + `PUT logbook` + publicação no RabbitMQ.
 - **2** App: login/pareamento, fila offline, motor por ponto no voo gravado, envio ao vivo, sincronização do diário.
 - **3** Web `apps/aviacao` + pacotes compartilhados.
 - **4** Alertas de motor (limites da aeronave), manutenção por horas, planos de voo, áreas/espaços aéreos, FlightMate.
 
 ## Pendências para começar
-- [ ] Dono: liberar SSH no(s) droplet(s) do PDA (firewall da DigitalOcean na porta 22, ou a porta certa) e dizer se há algo do PDA a guardar (banco/arquivos) antes de reaproveitar.
-- [ ] DNS: `flight.marinetcs.com` → droplet (A record) quando a instância subir.
+- [x] Servidor flight-1 (165.227.78.93) criado e preparado.
+- [ ] DNS: `flight.marinetcs.com` → 165.227.78.93 (registro A) quando a pilha subir.
 - [ ] Dono: termo LGPD (texto) — posso rascunhar.
