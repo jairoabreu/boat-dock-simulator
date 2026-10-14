@@ -76,7 +76,10 @@ Termo de consentimento no pareamento/primeiro login (versão + data em `pilot_pr
 
 ## Fases
 - **0** este contrato ✔ + servidor flight-1 preparado ✔.
-- **1** API (repo da plataforma, deploy só na instância flight de DEV primeiro): modelo + pareamento + `/live` + `PUT flights` + `PUT logbook` + publicação no RabbitMQ.
+- **1** API ✔ (14/10) — branch `feat/aviacao` do `~/matel-web-platform-api` (worktree `~/matel-api-aviacao`), migração **115_aviacao**, no ar em `https://flight.marinetcs.com/api/v1` (instância flight-1: compose em `/srv/flight`, banco próprio, backup diário 04:17 UTC, 14 dias). E2E `scripts/e2e_aviacao.py` passou inteiro (login → aeronave → pareamento → ao vivo sem duplicar → voo completo idempotente → diário nº 1 + correção nº 2 → tráfego FR24 → 401 com token ruim).
+  - Login: `POST /api/v1/auth/login` com **JSON** `{"email","password"}` → `access_token`/`refresh_token`; `GET /auth/me` traz a empresa.
+  - Flightradar24 (pedido do dono 14/10): `GET /aviation/traffic?bounds=N,S,W,E` (JWT **ou** token do iPad) e `GET /aviation/aircraft/{id}/fr24` (posição pela matrícula, p/ quem voa sem o app). Chave só no `.env` do servidor; cache de 15 s no Redis; **nada da FR24 vai para o banco** (regra deles: máx. 30 dias). Hoje com a chave de SANDBOX (dados fixos de teste).
+  - ⚠ Migração 115 nasceu no branch da aviação: se o branch dos barcos ganhar outra 115 antes do merge, renumerar (alembic com duas cabeças).
 - **2** App: login/pareamento, fila offline, motor por ponto no voo gravado, envio ao vivo, sincronização do diário.
 - **3** Web `apps/aviacao` + pacotes compartilhados.
 - **4** Alertas de motor (limites da aeronave), manutenção por horas, planos de voo, áreas/espaços aéreos, FlightMate.
