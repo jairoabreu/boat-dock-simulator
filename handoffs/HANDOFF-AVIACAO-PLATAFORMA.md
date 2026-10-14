@@ -83,5 +83,5 @@ Termo de consentimento no pareamento/primeiro login (versão + data em `pilot_pr
 
 ## Pendências para começar
 - [x] Servidor flight-1 (165.227.78.93) criado e preparado.
-- [ ] DNS: `flight.marinetcs.com` → 165.227.78.93 (registro A) quando a pilha subir.
+- [x] DNS: `flight.marinetcs.com` → 165.227.78.93 (A, somente DNS na Cloudflare) + HTTPS Let's Encrypt OK; página provisória (Caddy em /srv/flight/placeholder — remover quando a pilha subir).
 - [ ] Dono: termo LGPD (texto) — posso rascunhar.
