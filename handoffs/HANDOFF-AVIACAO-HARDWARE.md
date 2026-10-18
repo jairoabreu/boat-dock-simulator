@@ -120,10 +120,14 @@ Com dois aparelhos:
 - nomes no advertising: `MaTel-NAV-XXXX` e `MaTel-ENG-XXXX` (XXXX = final do MAC);
 - o ID (`0x7F`) da caixa NAV leva `caps` sem tráfego até o ADS-B existir.
 
-**Lado do app (Claude):** hoje o app se conecta ao **primeiro** aparelho que
-anuncia o serviço. Ele será adaptado para conectar aos dois ao mesmo tempo,
-pelo que cada um expõe. Até essa versão do app sair, **não ligue os dois
-juntos**. Avisem quando o primeiro protótipo separado existir.
+**Lado do app (Claude) — PRONTO no build 24 (17/10/2026):** o app se conecta
+aos dois ao mesmo tempo. Cada conexão assume os papéis que é a primeira a
+oferecer (motor = `a7e1`+`a7e2`; NAV = `a7e4`); uma caixa que não acrescenta
+nada é desconectada. Nome `MaTel-NAV-…`/`MaTel-ENG-…` com o papel já coberto
+nem é conectado; outros nomes (caixa única, `MaTel-SIM`) sempre são tentados.
+Caixa que some é liberada após ~30 s de tentativas e volta quando reaparecer.
+Ainda não testado com dois aparelhos reais: avisem quando o primeiro protótipo
+separado existir.
 
 ### 3.5 Regra para mudar um contrato
 
